@@ -70,6 +70,9 @@ button.chip{padding:6px 11px}
 .seg{display:flex;gap:6px}.seg button{flex:1;padding:10px 8px;font-size:14px}
 .seg button.sel{outline:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--chip))}
 .order{margin:6px 0 0;padding-left:22px}.order li{padding:3px 0}.order li.me{font-weight:700;color:var(--accent)}
+.votes{margin-top:8px;display:grid;gap:4px}.votes div{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:9px;background:var(--bg2);font-size:13px}
+.votes .hit{background:color-mix(in srgb,var(--good) 16%,var(--bg2));outline:1px solid color-mix(in srgb,var(--good) 55%,transparent)}
+.votes .hit b{color:var(--good)} .votes .none{color:var(--muted)}
 .banner{padding:12px 14px;border-radius:12px;background:var(--bg2);border:1px dashed var(--line)}
 .result{text-align:center;padding:28px 16px}
 .result .big{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:40px;line-height:1}
@@ -199,13 +202,22 @@ details li{margin:4px 0}
   // Speaking order for in-person rounds (clues are given out loud).
   const speakingOrder = () => `<ol class="order">${state.order.map((id) => `<li class="${id === state.you.id ? 'me' : ''}">${esc(nameOf(id))}${id === state.you.id ? ' (you)' : ''}</li>`).join('')}</ol>`;
 
+  // Moderator only: who voted for whom, with votes for the imposter highlighted.
+  function votesList(votes, live = false) {
+    return `<div class="votes">${state.players.map((p) => {
+      const t = votes?.[p.id], hit = t && t === state.imposterId;
+      const target = !t ? `<span class="none">${live ? 'voting…' : 'no vote'}</span>` : t === 'skip' ? '<span class="none">skip</span>' : `<b>${esc(nameOf(t))}</b>`;
+      return `<div class="${hit ? 'hit' : ''}"><span>${esc(p.name)} → ${target}</span>${hit ? '<b>✓ imposter</b>' : ''}</div>`;
+    }).join('')}</div>`;
+  }
+
   function talliesCard() {
     if (!state.tallies.length) return '';
     const label = { 'accused': 'Accused', 'no-majority': 'No majority → next round', 'tie-revote': 'Tie → re-vote', 'tie-moderator': 'Still tied → moderator decides', 'skipped': 'Moderator skipped voting → next round' };
     return `<div class="card"><h3>Vote history</h3>${state.tallies.map((t) => {
       const parts = Object.entries(t.counts).sort((a, b) => b[1] - a[1]).map(([id, n]) => `${esc(nameOf(id))} ${n}`);
       if (t.abstain) parts.push(`skip ${t.abstain}`);
-      const detail = t.outcome === 'skipped' ? '' : `<div class="muted">${parts.join(' · ') || 'no votes'}</div>`;
+      const detail = t.outcome === 'skipped' ? '' : `<div class="muted">${parts.join(' · ') || 'no votes'}</div>${t.votes ? votesList(t.votes) : ''}`;
       return `<div class="tally"><b>Round ${t.round}${t.revote ? ' (re-vote)' : ''}:</b> ${label[t.outcome] || ''}${t.accusedId ? ' ' + esc(nameOf(t.accusedId)) : ''}${detail}</div>`;
     }).join('')}</div>`;
   }
@@ -322,7 +334,7 @@ details li{margin:4px 0}
       } else if (s.phase === 'voting') {
         const final = s.round >= s.limits.rounds;
         panel = `<div class="card stack"><h2>Voting${s.candidates ? ' — re-vote' : ''}</h2><p class="muted">${s.voted.length}/${s.players.length} voted</p>
-          ${modReveal ? `<div class="small">${s.players.map((p) => `${esc(p.name)} → ${s.votes[p.id] ? (s.votes[p.id] === 'skip' ? 'skip' : esc(nameOf(s.votes[p.id]))) : '…'}`).join('<br>')}</div>` : ''}
+          ${votesList(s.votes, true)}
           <button class="btn-ghost full" data-act="closeVoting" data-confirm="Close voting now? Missing votes count as skip.">Close voting now</button>
           ${final || s.candidates ? '' : `<button class="btn-ghost full" data-act="skipVoting" data-confirm="Cancel this vote and start round ${s.round + 1}?">Skip voting → next round</button>`}</div>`;
       } else if (s.phase === 'tiebreak') {

@@ -169,6 +169,11 @@ async function test(name, fn) {
     await giveClues(ctx);
     const s = await voteAll(ctx, (p) => (p === ctx.imp ? ctx.crew[0].id : ctx.imp.id));
     assert.strictEqual(s.phase, 'guess');
+    // Moderator sees each player's vote; players only see the counts.
+    const modVotes = s.tallies.at(-1).votes;
+    for (const p of ctx.players) assert.strictEqual(modVotes[p.id], p === ctx.imp ? ctx.crew[0].id : ctx.imp.id);
+    await until(() => ctx.crew[0].sse.state.tallies.length === 1, 'player sees tally');
+    assert.strictEqual(ctx.crew[0].sse.state.tallies[0].votes, undefined, 'players never see who voted for whom');
     let r = await ctx.crew[0].act('guess', { text: 'Mango' });
     assert(!r.ok, 'only imposter can guess');
     r = await ctx.imp.act('guess', { text: '  mAnGo!' });

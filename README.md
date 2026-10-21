@@ -26,6 +26,8 @@ Clients poll `/api/state` about every 1.5 s (every 5 s while the tab is hidden).
 
 Once a vote decides, every screen shows the imposter's name in big letters with a short reveal animation: **CAUGHT** when the imposter was voted out, **ESCAPED** when an innocent player was. The animation plays once and is turned off for people who have reduced motion set.
 
+The moderator sees who voted for whom, live during voting and for every past round in the vote history, with votes for the imposter highlighted. Players only see the totals.
+
 Extras: players can't put the secret name inside their clue; moderator can skip a stuck player's turn, close voting early (missing votes = skip), remove players in the lobby, abort, play again with the same players. Refreshing or losing signal rejoins automatically.
 
 ## Run
