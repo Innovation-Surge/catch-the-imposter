@@ -160,6 +160,7 @@ async function test(name, fn) {
     const s = await voteAll(ctx, (p) => (p === innocent ? ctx.crew[0].id : innocent.id));
     assert.strictEqual(s.phase, 'ended');
     assert.deepStrictEqual(s.result, { winner: 'imposter', reason: 'wrong-accusation' });
+    await until(() => ctx.crew[2].sse.state.phase === 'ended', 'player sees the end');
     assert.strictEqual(ctx.crew[2].sse.state.imposterId, ctx.imp.id, 'imposter revealed to all at the end');
   });
 
