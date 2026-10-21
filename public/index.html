@@ -121,29 +121,34 @@ details li{margin:4px 0}
     if (!session) return { ok: false };
     const r = await post('action', { ...session, type, ...extra });
     if (!r.ok) toast(r.error, 'err');
+    else poll(); // show the result right away instead of waiting for the next poll
     return r;
   }
 
-  // Live updates over Server-Sent Events (auto-reconnects).
-  let es = null;
-  function connect() {
-    if (es) { es.close(); es = null; }
-    if (!session) { connected = true; render(); return; }
-    es = new EventSource(`/events?code=${encodeURIComponent(session.code)}&token=${encodeURIComponent(session.token)}`);
-    es.onopen = () => { connected = true; render(); };
-    es.onerror = () => { connected = false; render(); };
-    es.addEventListener('state', (ev) => {
-      const s = JSON.parse(ev.data);
-      if (s.gameNo !== lastGame) { reveal = false; modReveal = false; lastGame = s.gameNo; }
-      state = s; connected = true; render();
-    });
-    es.addEventListener('kicked', (ev) => {
-      const { message } = JSON.parse(ev.data);
-      es.close(); es = null; save(null); state = null; connected = true;
-      toast(message, 'err'); render();
-    });
+  // Live updates by polling /api/state (works on serverless hosts like Netlify).
+  let pollTimer = null, pollSeq = 0, lastRaw = null;
+  async function poll() {
+    clearTimeout(pollTimer);
+    if (!session) return;
+    const s = session, seq = ++pollSeq;
+    const r = await post('state', s);
+    if (s !== session || seq !== pollSeq) return; // superseded by a newer poll or a new session
+    if (r.ok) {
+      const raw = JSON.stringify(r.state);
+      if (raw !== lastRaw || !connected) {
+        lastRaw = raw;
+        if (r.state.gameNo !== lastGame) { reveal = false; modReveal = false; lastGame = r.state.gameNo; }
+        state = r.state; connected = true; render();
+      }
+    } else if (r.kicked) {
+      endSession(); toast(r.kicked, 'err'); return;
+    } else if (connected) { connected = false; render(); }
+    pollTimer = setTimeout(poll, document.hidden ? 5000 : 1500);
   }
+  function connect() { lastRaw = null; connected = true; if (session) poll(); else render(); }
+  function endSession() { clearTimeout(pollTimer); pollSeq++; save(null); state = null; lastRaw = null; connected = true; render(); }
   function startSession(s) { save(s); connect(); }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 
   /* ---------- shared pieces ---------- */
   const header = (right) => `
@@ -360,7 +365,7 @@ details li{margin:4px 0}
       case 'tiebreak': await act('tiebreak', { target: arg }); break;
       case 'review': await act('review', { accept: arg === '1' }); break;
       case 'leave':
-      case 'closeRoom': { const r = await act(type); if (r.ok) { es?.close(); es = null; save(null); state = null; render(); } break; }
+      case 'closeRoom': { const r = await act(type); if (r.ok) endSession(); break; }
       default: await act(type);
     }
   });

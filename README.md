@@ -1,7 +1,11 @@
 # Imposter — party word game
 
 Real-time web game: one moderator, 4–10 players, one hidden imposter.
-Zero dependencies — plain Node.js (18+). No database; rooms live in memory.
+Runs two ways with the same game code (`lib/game.js`):
+- **Netlify** — static `public/` + a Netlify Function at `/api/*`, rooms stored in Netlify Blobs.
+- **Plain Node.js (18+)** — `server.js`, rooms in memory.
+
+Clients poll `/api/state` about every 1.5 s (every 5 s while the tab is hidden).
 
 ## Rules (as implemented)
 
@@ -27,6 +31,8 @@ npm test                  # plays 10 simulated games against a live server
 
 ## Deploy
 
+**Netlify:** connect the repo (or `netlify deploy --prod`). `netlify.toml` already sets the publish dir to `public/`, so the game is served at `/`, and the API function runs at `/api/*`. Leave the build command empty. Blobs need no setup. Local Netlify emulation: `npx netlify-cli dev`.
+
 **Any VPS (PM2):**
 ```bash
 pm2 start server.js --name imposter
@@ -39,7 +45,7 @@ docker build -t imposter . && docker run -d -p 3000:3000 --restart unless-stoppe
 
 **Render / Railway / Fly:** create a Node web service, start command `node server.js`, health check `/health`. No build step.
 
-**Behind nginx** — live updates use Server-Sent Events, so disable buffering on `/events`:
+**Behind nginx:**
 ```nginx
 location / {
     proxy_pass http://127.0.0.1:3000;
@@ -51,7 +57,7 @@ location / {
 }
 ```
 
-**Important:** run a single instance. Game state is in memory, so don't load-balance across multiple processes (no PM2 cluster mode). A restart ends any game in progress.
+**Important (Node server only):** run a single instance. Game state is in memory, so don't load-balance across multiple processes (no PM2 cluster mode). A restart ends any game in progress.
 
 ## API (for reference)
 
@@ -60,5 +66,5 @@ location / {
 | POST | `/api/create` | – | New room → `{code, token}` (moderator) |
 | POST | `/api/join` | `{code, name}` | Join lobby → `{code, token}` |
 | POST | `/api/action` | `{code, token, type, ...}` | `setSecret, start, clue, vote, skipTurn, closeVoting, tiebreak, guess, pass, review, kick, leave, newGame, closeRoom` |
-| GET | `/events?code=&token=` | – | SSE stream of per-viewer `state` (the imposter's view never contains the word) |
-| GET | `/health` | – | Liveness |
+| POST | `/api/state` | `{code, token}` | Per-viewer `state` (the imposter's view never contains the word), or `{ok:false, kicked}` |
+| GET | `/health` | – | Liveness (Node server only) |

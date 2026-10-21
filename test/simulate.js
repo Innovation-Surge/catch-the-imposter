@@ -1,6 +1,6 @@
 'use strict';
 // End-to-end simulation: starts the server on a random port and plays full games
-// with fake players over the real HTTP + SSE interface.
+// with fake players over the real HTTP polling interface.
 //   node test/simulate.js
 const assert = require('assert');
 const { spawn } = require('child_process');
@@ -15,27 +15,20 @@ async function post(route, body) {
   return r.json();
 }
 
-// Minimal SSE client that keeps the latest 'state' and records 'kicked'.
+// Minimal polling client (same as the browser) that keeps the latest state and records 'kicked'.
 function listen(session) {
-  const client = { state: null, kicked: null, ctrl: new AbortController() };
+  const client = { state: null, kicked: null, ctrl: { abort: () => (client.stopped = true) } };
   (async () => {
-    try {
-      const r = await fetch(`${BASE}/events?code=${session.code}&token=${session.token}`, { signal: client.ctrl.signal });
-      const dec = new TextDecoder();
-      let buf = '';
-      for await (const chunk of r.body) {
-        buf += dec.decode(chunk, { stream: true });
-        let i;
-        while ((i = buf.indexOf('\n\n')) >= 0) {
-          const block = buf.slice(0, i);
-          buf = buf.slice(i + 2);
-          const ev = /^event: (.*)$/m.exec(block)?.[1];
-          const data = /^data: (.*)$/m.exec(block)?.[1];
-          if (ev === 'state') client.state = JSON.parse(data);
-          if (ev === 'kicked') client.kicked = JSON.parse(data);
-        }
+    while (!client.stopped) {
+      const r = await post('state', session).catch(() => ({}));
+      if (client.stopped) break;
+      if (r.ok) client.state = r.state;
+      else if (r.kicked) {
+        client.kicked = { message: r.kicked };
+        break;
       }
-    } catch {}
+      await sleep(25);
+    }
   })();
   return client;
 }
@@ -111,7 +104,7 @@ async function test(name, fn) {
 }
 
 (async () => {
-  const srv = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: { ...process.env, PORT }, stdio: 'inherit' });
+  const srv = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: { ...process.env, PORT, ONLINE_MS: '400', TOUCH_MS: '50' }, stdio: 'inherit' });
   await until(async () => true, 'boot');
   for (let i = 0; i < 50; i++) {
     try {
@@ -277,6 +270,15 @@ async function test(name, fn) {
     p.sse = listen(p.session);
     await until(() => p.sse.state && ctx.m.sse.state.players.find((x) => x.id === p.id).online, 'back online');
     assert.strictEqual(p.sse.state.you.isImposter, true);
+  });
+
+  await test('simultaneous votes are all counted', async () => {
+    const ctx = await startAndMap(await setup(8));
+    await giveClues(ctx);
+    const rs = await Promise.all(ctx.players.map((p) => p.act('vote', { target: 'skip' })));
+    assert(rs.every((r) => r.ok), rs.find((r) => !r.ok)?.error);
+    await until(() => ctx.m.sse.state.tallies.length === 1, 'tally');
+    assert.strictEqual(ctx.m.sse.state.tallies[0].abstain, 8, 'no vote lost');
   });
 
   srv.kill();

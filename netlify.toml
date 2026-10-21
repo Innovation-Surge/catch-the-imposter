@@ -1,0 +1,9 @@
+# Serve public/ at the site root (so the game is at / instead of /public)
+# and run the API from netlify/functions/api.mjs at /api/*.
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["lib/**"]
