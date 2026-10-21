@@ -10,11 +10,15 @@ Clients poll `/api/state` about every 1.5 s (every 5 s while the tab is hidden).
 ## Rules (as implemented)
 
 1. Moderator taps **Host a game**, gets a 5-letter room code, sets a **topic** (e.g. Fruit) and a **secret name** (e.g. Mango).
+   In the lobby the moderator also picks the **game options**:
+   - **Clues:** *typed in the app* (default), or *said out loud* when everyone is in the same room.
+   - **Rounds:** 3 or 4 (default 4). The last round is the final round.
 2. Players join on their phones with the code or the shared link (`/?room=CODE`). Min 4, max 10, unique names.
 3. Moderator presses **Start** → room locks, one random player becomes the imposter. Everyone sees the topic; only non-imposters see the name. Cards are hidden behind "tap to reveal".
 4. Each round: every player gives one clue in turn order (order rotates each round), then everyone votes.
-   - Rounds 1–3: a player needs a **strict majority** of all votes to be accused; players may **skip**. No majority → next round.
-   - Round 4 (final): skip is not allowed — players must decide. Most votes is accused. Tie → one re-vote among the tied players; still tied → moderator picks among them.
+   - **Said out loud:** players speak their clue in the shown order; nothing is typed. The moderator then taps **Open imposter voting**, or **Skip voting → next round**. Only the moderator can skip — players can't vote "skip", and the moderator can also cancel an open vote and start the next round.
+   - Before the final round: a player needs a **strict majority** of all votes to be accused; in app mode players may **skip**. No majority → next round.
+   - Final round (round 3 or 4): skip is not allowed — players must decide. Most votes is accused. Tie → one re-vote among the tied players; still tied → moderator picks among them.
 5. Accused is innocent → **imposter wins**.
 6. Accused is the imposter → imposter may guess the secret name (or give up).
    - Exact match (ignores case, spaces, punctuation, accents) → **imposter wins**.
@@ -26,7 +30,7 @@ Extras: players can't put the secret name inside their clue; moderator can skip 
 
 ```bash
 node server.js            # http://localhost:3000   (PORT env var to change)
-npm test                  # plays 10 simulated games against a live server
+npm test                  # plays simulated games against a live server
 ```
 
 ## Deploy
@@ -65,6 +69,6 @@ location / {
 |---|---|---|---|
 | POST | `/api/create` | – | New room → `{code, token}` (moderator) |
 | POST | `/api/join` | `{code, name}` | Join lobby → `{code, token}` |
-| POST | `/api/action` | `{code, token, type, ...}` | `setSecret, start, clue, vote, skipTurn, closeVoting, tiebreak, guess, pass, review, kick, leave, newGame, closeRoom` |
+| POST | `/api/action` | `{code, token, type, ...}` | `setSecret, setOptions, start, openVoting, skipVoting, clue, vote, skipTurn, closeVoting, tiebreak, guess, pass, review, kick, leave, newGame, closeRoom` |
 | POST | `/api/state` | `{code, token}` | Per-viewer `state` (the imposter's view never contains the word), or `{ok:false, kicked}` |
 | GET | `/health` | – | Liveness (Node server only) |

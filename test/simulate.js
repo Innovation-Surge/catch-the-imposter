@@ -64,7 +64,7 @@ async function setup(n, word = 'Mango') {
 async function startAndMap(ctx) {
   const r = await ctx.m.act('start');
   assert(r.ok, r.error);
-  await until(() => ctx.players.every((p) => p.sse.state?.phase === 'clues'), 'game start');
+  await until(() => ctx.m.sse.state?.phase === 'clues' && ctx.players.every((p) => p.sse.state?.phase === 'clues'), 'game start');
   for (const p of ctx.players) p.id = p.sse.state.you.id;
   ctx.byId = Object.fromEntries(ctx.players.map((p) => [p.id, p]));
   ctx.imp = ctx.players.find((p) => p.sse.state.you.isImposter);
@@ -279,6 +279,65 @@ async function test(name, fn) {
     assert(rs.every((r) => r.ok), rs.find((r) => !r.ok)?.error);
     await until(() => ctx.m.sse.state.tallies.length === 1, 'tally');
     assert.strictEqual(ctx.m.sse.state.tallies[0].abstain, 8, 'no vote lost');
+  });
+
+  await test('options: rounds limited to 3 or 4, locked after start', async () => {
+    const ctx = await setup(4);
+    let r = await ctx.m.act('setOptions', { rounds: 5 });
+    assert(!r.ok, '5 rounds refused');
+    r = await ctx.players[0].act('setOptions', { rounds: 3 });
+    assert(!r.ok && /moderator/.test(r.error), 'players cannot change options');
+    assert((await ctx.m.act('setOptions', { rounds: 3 })).ok);
+    await startAndMap(ctx);
+    assert.strictEqual(ctx.players[0].sse.state.limits.rounds, 3);
+    r = await ctx.m.act('setOptions', { rounds: 4 });
+    assert(!r.ok, 'options locked once the game runs');
+    for (let round = 1; round <= 2; round++) {
+      await giveClues(ctx);
+      await voteAll(ctx, () => 'skip');
+    }
+    await giveClues(ctx);
+    r = await ctx.crew[0].act('vote', { target: 'skip' });
+    assert(!r.ok && /must pick/.test(r.error), 'round 3 is final when 3 rounds are set');
+  });
+
+  await test('in person: no typed clues, moderator opens/skips voting, players cannot skip', async () => {
+    const ctx = await setup(4);
+    assert((await ctx.m.act('setOptions', { mode: 'inperson', rounds: 3 })).ok);
+    await ctx.m.act('start');
+    await until(() => ctx.players.every((p) => p.sse.state?.phase === 'discuss'), 'discuss phase');
+    for (const p of ctx.players) p.id = p.sse.state.you.id;
+    const imp = ctx.players.find((p) => p.sse.state.you.isImposter);
+    const crew = ctx.players.filter((p) => p !== imp);
+    let r = await crew[0].act('clue', { text: 'yellow' });
+    assert(!r.ok, 'no typed clues in person');
+    r = await crew[0].act('openVoting');
+    assert(!r.ok && /moderator/.test(r.error), 'players cannot open voting');
+    r = await crew[0].act('skipVoting');
+    assert(!r.ok && /moderator/.test(r.error), 'players cannot skip voting');
+
+    // Round 1: moderator skips straight to round 2.
+    assert((await ctx.m.act('skipVoting')).ok);
+    await until(() => ctx.m.sse.state.round === 2 && ctx.m.sse.state.phase === 'discuss', 'round 2');
+    assert.strictEqual(ctx.m.sse.state.tallies.at(-1).outcome, 'skipped');
+
+    // Round 2: voting opened, players may not skip; moderator cancels the vote.
+    assert((await ctx.m.act('openVoting')).ok);
+    await until(() => crew[0].sse.state.phase === 'voting', 'voting open');
+    r = await crew[0].act('vote', { target: 'skip' });
+    assert(!r.ok && /Only the moderator/.test(r.error), 'players cannot skip in person');
+    assert((await crew[0].act('vote', { target: crew[1].id })).ok);
+    assert((await ctx.m.act('skipVoting')).ok);
+    await until(() => ctx.m.sse.state.round === 3 && ctx.m.sse.state.phase === 'discuss', 'round 3');
+
+    // Round 3 (final): cannot skip; votes catch the imposter.
+    r = await ctx.m.act('skipVoting');
+    assert(!r.ok && /Final round/.test(r.error), 'final round cannot be skipped');
+    await ctx.m.act('openVoting');
+    await until(() => ctx.m.sse.state.phase === 'voting', 'final voting');
+    for (const p of ctx.players) assert((await p.act('vote', { target: p === imp ? crew[0].id : imp.id })).ok);
+    await until(() => ctx.m.sse.state.phase === 'guess', 'imposter caught');
+    assert.strictEqual(ctx.m.sse.state.accusedId, imp.id);
   });
 
   srv.kill();

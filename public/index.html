@@ -67,6 +67,9 @@ button.chip{padding:6px 11px}
 .vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .vote-grid button{text-align:left;display:flex;gap:8px;align-items:center;padding:12px}
 .vote-grid button.sel{outline:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--chip))}
+.seg{display:flex;gap:6px}.seg button{flex:1;padding:10px 8px;font-size:14px}
+.seg button.sel{outline:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--chip))}
+.order{margin:6px 0 0;padding-left:22px}.order li{padding:3px 0}.order li.me{font-weight:700;color:var(--accent)}
 .banner{padding:12px 14px;border-radius:12px;background:var(--bg2);border:1px dashed var(--line)}
 .result{text-align:center;padding:28px 16px}
 .result .big{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:40px;line-height:1}
@@ -170,13 +173,17 @@ details li{margin:4px 0}
       ${byRound[r].map((c) => `<div class="clue"><span>${esc(nameOf(c.playerId))}</span>${c.skipped ? '<em>skipped</em>' : `<span class="txt">${esc(c.text)}</span>`}</div>`).join('')}</div>`).join('')}</div>`;
   }
 
+  // Speaking order for in-person rounds (clues are given out loud).
+  const speakingOrder = () => `<ol class="order">${state.order.map((id) => `<li class="${id === state.you.id ? 'me' : ''}">${esc(nameOf(id))}${id === state.you.id ? ' (you)' : ''}</li>`).join('')}</ol>`;
+
   function talliesCard() {
     if (!state.tallies.length) return '';
-    const label = { 'accused': 'Accused', 'no-majority': 'No majority → next round', 'tie-revote': 'Tie → re-vote', 'tie-moderator': 'Still tied → moderator decides' };
+    const label = { 'accused': 'Accused', 'no-majority': 'No majority → next round', 'tie-revote': 'Tie → re-vote', 'tie-moderator': 'Still tied → moderator decides', 'skipped': 'Moderator skipped voting → next round' };
     return `<div class="card"><h3>Vote history</h3>${state.tallies.map((t) => {
       const parts = Object.entries(t.counts).sort((a, b) => b[1] - a[1]).map(([id, n]) => `${esc(nameOf(id))} ${n}`);
       if (t.abstain) parts.push(`skip ${t.abstain}`);
-      return `<div class="tally"><b>Round ${t.round}${t.revote ? ' (re-vote)' : ''}:</b> ${label[t.outcome] || ''}${t.accusedId ? ' ' + esc(nameOf(t.accusedId)) : ''}<div class="muted">${parts.join(' · ') || 'no votes'}</div></div>`;
+      const detail = t.outcome === 'skipped' ? '' : `<div class="muted">${parts.join(' · ') || 'no votes'}</div>`;
+      return `<div class="tally"><b>Round ${t.round}${t.revote ? ' (re-vote)' : ''}:</b> ${label[t.outcome] || ''}${t.accusedId ? ' ' + esc(nameOf(t.accusedId)) : ''}${detail}</div>`;
     }).join('')}</div>`;
   }
 
@@ -220,8 +227,9 @@ details li{margin:4px 0}
         <li>The moderator creates a room, picks a <b>topic</b> (e.g. Fruit) and a <b>secret name</b> (e.g. Mango).</li>
         <li>4–10 players join with the room code. When the moderator starts, the room locks.</li>
         <li>One random player is the <b>imposter</b>: they see only the topic.</li>
-        <li>Each round, everyone gives a one-word clue in turn, then votes. A majority catches the suspect; otherwise the next round begins.</li>
-        <li>Round 4 is final — players must pick someone (ties get one re-vote, then the moderator decides).</li>
+        <li>Each round, everyone gives a one-word clue in turn — typed in the app, or said out loud if you're playing in the same room — then votes. A majority catches the suspect; otherwise the next round begins.</li>
+        <li>In the same room, the moderator decides when voting opens, and only the moderator can skip a vote and move to the next round.</li>
+        <li>The moderator sets 3 or 4 rounds. The last round is final — players must pick someone (ties get one re-vote, then the moderator decides).</li>
         <li>Wrong person accused → imposter wins. Imposter caught → they can guess the name; guess right and they still win.</li>
       </ol></details></div>`;
   }
@@ -242,6 +250,13 @@ details li{margin:4px 0}
           <div><label>Secret name (hidden from the imposter)</label><input name="word" data-keep="word" maxlength="60" value="${esc(s.word)}" placeholder="e.g. Mango" autocomplete="off"></div>
           <button class="full" type="submit">Save secret</button>
         </form>
+        <div class="card stack"><h2>Game options</h2>
+          <div><label>Clues</label><div class="seg">
+            <button class="${s.mode === 'app' ? 'sel' : ''}" data-act="opt" data-arg="mode:app">Typed in the app</button>
+            <button class="${s.mode === 'inperson' ? 'sel' : ''}" data-act="opt" data-arg="mode:inperson">Said out loud</button></div>
+            <p class="muted small" style="margin:6px 0 0">${s.mode === 'inperson' ? 'Everyone is in the same room. Players say their clue out loud; you open the vote when they are ready, or skip it and start the next round.' : 'Players type their clue in turn on their phones.'}</p></div>
+          <div><label>Rounds</label><div class="seg">${s.limits.roundChoices.map((r) => `<button class="${s.limits.rounds === r ? 'sel' : ''}" data-act="opt" data-arg="rounds:${r}">${r} rounds</button>`).join('')}</div></div>
+        </div>
         <div class="card"><div class="row between"><h2>Players</h2><span class="muted">${n}/${s.limits.max}</span></div>
           ${n ? playerList({ extra: (p) => `<button class="btn-ghost" style="padding:5px 10px;font-size:13px" data-act="kick" data-arg="${p.id}" data-confirm="Remove ${esc(p.name)}?">Remove</button>` }) : '<p class="muted">Share the room code — players join on their phones.</p>'}
         </div>
@@ -256,10 +271,17 @@ details li{margin:4px 0}
         const cur = s.players.find((p) => p.id === s.turnId);
         panel = `<div class="card stack"><h2>Clue time</h2><p>Waiting for <b>${esc(cur?.name)}</b> ${cur && !cur.online ? '<span class="chip">offline</span>' : ''}</p>
           <button class="btn-ghost full" data-act="skipTurn" data-confirm="Skip ${esc(cur?.name)}'s turn?">Skip this player's turn</button></div>`;
+      } else if (s.phase === 'discuss') {
+        const final = s.round >= s.limits.rounds;
+        panel = `<div class="card stack"><h2>Clues out loud</h2><p class="muted small">Each player says one clue, in this order:</p>${speakingOrder()}
+          <button class="btn-primary full" data-act="openVoting">Open imposter voting</button>
+          ${final ? '<p class="muted small" style="text-align:center">Final round — players must vote.</p>' : `<button class="btn-ghost full" data-act="skipVoting" data-confirm="Skip voting and start round ${s.round + 1}?">Skip voting → next round</button>`}</div>`;
       } else if (s.phase === 'voting') {
+        const final = s.round >= s.limits.rounds;
         panel = `<div class="card stack"><h2>Voting${s.candidates ? ' — re-vote' : ''}</h2><p class="muted">${s.voted.length}/${s.players.length} voted</p>
           ${modReveal ? `<div class="small">${s.players.map((p) => `${esc(p.name)} → ${s.votes[p.id] ? (s.votes[p.id] === 'skip' ? 'skip' : esc(nameOf(s.votes[p.id]))) : '…'}`).join('<br>')}</div>` : ''}
-          <button class="btn-ghost full" data-act="closeVoting" data-confirm="Close voting now? Missing votes count as skip.">Close voting now</button></div>`;
+          <button class="btn-ghost full" data-act="closeVoting" data-confirm="Close voting now? Missing votes count as skip.">Close voting now</button>
+          ${final || s.candidates ? '' : `<button class="btn-ghost full" data-act="skipVoting" data-confirm="Cancel this vote and start round ${s.round + 1}?">Skip voting → next round</button>`}</div>`;
       } else if (s.phase === 'tiebreak') {
         panel = `<div class="card stack"><h2>Break the tie</h2><p class="muted">Still tied after the re-vote. Choose who is accused:</p>
           <div class="vote-grid">${s.tieCandidates.map((id) => `<button data-act="tiebreak" data-arg="${id}" data-confirm="Accuse ${esc(nameOf(id))}?">${avatar({ id, name: nameOf(id) })}${esc(nameOf(id))}</button>`).join('')}</div></div>`;
@@ -304,13 +326,16 @@ details li{margin:4px 0}
           const pos = s.order.indexOf(me.id) - s.order.indexOf(s.turnId);
           panel = `<div class="card"><p>Waiting for <b>${esc(nameOf(s.turnId))}</b> to give a clue…</p>${pos > 0 ? `<p class="muted small">You're ${pos === 1 ? 'next' : `up in ${pos} turns`}.</p>` : ''}</div>`;
         }
+      } else if (s.phase === 'discuss') {
+        panel = `<div class="card"><h2>Say your clue out loud</h2><p class="muted small">One clue each about the ${esc(s.topic.toLowerCase())}, in this order:</p>${speakingOrder()}
+          <p class="muted small pulse" style="margin-top:10px">The moderator will open voting when you're ready.</p></div>`;
       } else if (s.phase === 'voting') {
         const pool = (s.candidates || s.players.map((p) => p.id)).filter((id) => id !== me.id);
-        const final = s.round >= s.limits.rounds;
+        const final = s.round >= s.limits.rounds, inPerson = s.mode === 'inperson';
         panel = `<div class="card stack"><h2>${s.candidates ? 'Re-vote: it\'s a tie' : 'Who is the imposter?'}</h2>
-          <p class="muted small">${final ? 'Final round — you must choose.' : 'Need a majority to accuse. Skip if unsure.'} ${s.voted.length}/${s.players.length} voted. You can change your vote until everyone has voted.</p>
+          <p class="muted small">${final ? 'Final round — you must choose.' : inPerson ? 'Need a majority to accuse.' : 'Need a majority to accuse. Skip if unsure.'} ${s.voted.length}/${s.players.length} voted. You can change your vote until everyone has voted.</p>
           <div class="vote-grid">${pool.map((id) => `<button class="${s.myVote === id ? 'sel' : ''}" data-act="vote" data-arg="${id}">${avatar({ id, name: nameOf(id) })}${esc(nameOf(id))}</button>`).join('')}</div>
-          ${final ? '' : `<button class="btn-ghost full ${s.myVote === 'skip' ? 'sel' : ''}" data-act="vote" data-arg="skip">${s.myVote === 'skip' ? '✓ Skipping this round' : 'Skip — not sure yet'}</button>`}</div>`;
+          ${final || inPerson ? '' : `<button class="btn-ghost full ${s.myVote === 'skip' ? 'sel' : ''}" data-act="vote" data-arg="skip">${s.myVote === 'skip' ? '✓ Skipping this round' : 'Skip — not sure yet'}</button>`}</div>`;
       } else if (s.phase === 'tiebreak') {
         panel = `<div class="card"><p class="pulse">Still tied — the moderator is breaking the tie…</p></div>`;
       } else if (s.phase === 'guess') {
@@ -360,6 +385,7 @@ details li{margin:4px 0}
       }
       case 'reveal': reveal = !reveal; render(); break;
       case 'modReveal': modReveal = !modReveal; render(); break;
+      case 'opt': { const [k, v] = arg.split(':'); await act('setOptions', { [k]: k === 'rounds' ? Number(v) : v }); break; }
       case 'kick': await act('kick', { id: arg }); break;
       case 'vote': await act('vote', { target: arg }); break;
       case 'tiebreak': await act('tiebreak', { target: arg }); break;
