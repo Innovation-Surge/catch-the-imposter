@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Imposter</title>
+<meta name="theme-color" content="#15121f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#15121f;--bg2:#1d1930;--card:#231e38;--line:#352e52;--text:#f3f0fa;--muted:#a49cbf;
+  --accent:#ff5d73;--accent2:#ffb347;--good:#3ddc97;--warn:#ffcc4d;--chip:#2d2747;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: light){
+  :root{--bg:#f6f3fb;--bg2:#ece7f6;--card:#ffffff;--line:#e0d9ee;--text:#1d1830;--muted:#6c6488;--chip:#efeaf8;--shadow:0 8px 24px rgba(40,20,80,.08)}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;background:radial-gradient(1200px 500px at 50% -200px,color-mix(in srgb,var(--accent) 18%,transparent),transparent),var(--bg)}
+#app{max-width:560px;margin:0 auto;padding:16px 16px 48px}
+h1,h2,h3{font-family:"Bricolage Grotesque",Inter,sans-serif;margin:0;letter-spacing:-.01em}
+h1{font-size:44px;font-weight:800;line-height:1}
+h2{font-size:22px;font-weight:800}
+h3{font-size:15px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:Inter,sans-serif}
+.muted{color:var(--muted)} .small{font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0;box-shadow:var(--shadow)}
+.row{display:flex;gap:8px;align-items:center}.between{justify-content:space-between}.wrap{flex-wrap:wrap}
+.stack>*+*{margin-top:10px}
+input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);color:var(--text);font:inherit;font-size:16px;outline:none}
+input:focus{border-color:var(--accent)}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px;font-weight:500}
+button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:13px 16px;cursor:pointer;background:var(--chip);color:var(--text);transition:transform .08s,opacity .15s}
+button:active{transform:scale(.97)} button:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a0f1f}
+.btn-good{background:var(--good);color:#06281a}
+.btn-danger{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.btn-ghost{background:transparent;border:1px solid var(--line)}
+.full{width:100%}
+.chip{display:inline-block;padding:6px 11px;border-radius:999px;background:var(--chip);font-size:13px;font-weight:500;border:1px solid transparent}
+button.chip{padding:6px 11px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.brand{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:20px}
+.brand span{color:var(--accent)}
+.code{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:34px;letter-spacing:.12em}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--good)}
+.dot.off{background:#777}
+.players{list-style:none;margin:0;padding:0}
+.players li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.players li:first-child{border-top:0}
+.avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#1a0f1f;flex:none}
+.pname{display:flex;align-items:center;gap:10px;min-width:0}
+.pname b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rounds{display:flex;gap:6px}
+.rounds i{flex:1;height:6px;border-radius:4px;background:var(--line)}
+.rounds i.done{background:var(--muted)} .rounds i.now{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.secret{text-align:center;padding:26px 16px;border-radius:20px;background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 22%,var(--card)),var(--card));border:1px solid var(--line);cursor:pointer;user-select:none}
+.secret .big{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:36px;line-height:1.1;margin:6px 0;word-break:break-word}
+.secret.imp{background:linear-gradient(160deg,#5a1022,var(--card))}
+.secret.imp .big{color:var(--accent)}
+.hidden-tap{padding:30px 16px;color:var(--muted)}
+.clues .rd{margin-top:12px}
+.clue{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:10px;background:var(--bg2);margin-top:6px}
+.clue em{color:var(--muted)}
+.clue .txt{font-weight:600;text-align:right;word-break:break-word}
+.vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vote-grid button{text-align:left;display:flex;gap:8px;align-items:center;padding:12px}
+.vote-grid button.sel{outline:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--chip))}
+.banner{padding:12px 14px;border-radius:12px;background:var(--bg2);border:1px dashed var(--line)}
+.result{text-align:center;padding:28px 16px}
+.result .big{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:40px;line-height:1}
+.win-imp{color:var(--accent)} .win-pl{color:var(--good)}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+.divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:18px 0}
+.divider:before,.divider:after{content:"";flex:1;height:1px;background:var(--line)}
+details summary{cursor:pointer;font-weight:600}
+details ol{padding-left:18px;margin:10px 0 0;color:var(--muted)}
+details li{margin:4px 0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);max-width:92vw;background:var(--text);color:var(--bg);padding:12px 16px;border-radius:12px;font-weight:600;transition:transform .25s,opacity .25s;opacity:0;pointer-events:none;z-index:9;box-shadow:var(--shadow)}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.err{background:var(--accent);color:#1a0f1f}
+.offline-bar{background:var(--warn);color:#2a2000;text-align:center;padding:6px;font-size:13px;font-weight:600;border-radius:10px;margin-bottom:10px}
+.tally{font-size:13px;padding:8px 0;border-top:1px solid var(--line)}
+.tally:first-of-type{border-top:0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+(() => {
+  const SKEY = 'imposter.session';
+  const $app = document.getElementById('app');
+  let state = null, connected = true;
+  let reveal = false, modReveal = false, lastGame = null;
+  let session = (() => { try { return JSON.parse(localStorage.getItem(SKEY)); } catch { return null; } })();
+  const save = (s) => { session = s; try { s ? localStorage.setItem(SKEY, JSON.stringify(s)) : localStorage.removeItem(SKEY); } catch {} };
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const COLORS = ['#ff5d73','#ffb347','#3ddc97','#6ec6ff','#c792ea','#ffd166','#f78fb3','#7bed9f','#a29bfe','#fab1a0'];
+  const colorOf = (id) => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; };
+  const avatar = (p) => `<span class="avatar" style="background:${colorOf(p.id)}">${esc((p.name || '?')[0].toUpperCase())}</span>`;
+  const nameOf = (id) => state?.players.find((p) => p.id === id)?.name ?? '?';
+  const urlRoom = new URLSearchParams(location.search).get('room') || '';
+
+  let toastTimer;
+  function toast(msg, kind) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'show ' + (kind || '');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.className = ''), 3200);
+  }
+  async function post(route, body) {
+    try {
+      const r = await fetch('/api/' + route, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+      return await r.json();
+    } catch { return { ok: false, error: 'Could not reach the server.' }; }
+  }
+  async function act(type, extra = {}) {
+    if (!session) return { ok: false };
+    const r = await post('action', { ...session, type, ...extra });
+    if (!r.ok) toast(r.error, 'err');
+    return r;
+  }
+
+  // Live updates over Server-Sent Events (auto-reconnects).
+  let es = null;
+  function connect() {
+    if (es) { es.close(); es = null; }
+    if (!session) { connected = true; render(); return; }
+    es = new EventSource(`/events?code=${encodeURIComponent(session.code)}&token=${encodeURIComponent(session.token)}`);
+    es.onopen = () => { connected = true; render(); };
+    es.onerror = () => { connected = false; render(); };
+    es.addEventListener('state', (ev) => {
+      const s = JSON.parse(ev.data);
+      if (s.gameNo !== lastGame) { reveal = false; modReveal = false; lastGame = s.gameNo; }
+      state = s; connected = true; render();
+    });
+    es.addEventListener('kicked', (ev) => {
+      const { message } = JSON.parse(ev.data);
+      es.close(); es = null; save(null); state = null; connected = true;
+      toast(message, 'err'); render();
+    });
+  }
+  function startSession(s) { save(s); connect(); }
+
+  /* ---------- shared pieces ---------- */
+  const header = (right) => `
+    ${!connected ? '<div class="offline-bar">Reconnecting…</div>' : ''}
+    <div class="top"><div class="brand">Imp<span>o</span>ster</div>${right || ''}</div>`;
+
+  const roundsBar = () => {
+    const n = state.limits.rounds;
+    return `<div class="row between small muted" style="margin-bottom:6px"><span>Round ${state.round} of ${n}</span><span>${state.round === n ? 'Final round — must decide' : 'Majority needed to accuse'}</span></div>
+      <div class="rounds">${Array.from({ length: n }, (_, i) => `<i class="${i + 1 < state.round ? 'done' : i + 1 === state.round ? 'now' : ''}"></i>`).join('')}</div>`;
+  };
+
+  function cluesBoard() {
+    if (!state.clues.length) return '';
+    const byRound = {};
+    state.clues.forEach((c) => (byRound[c.round] ||= []).push(c));
+    return `<div class="card clues"><h3>Clues</h3>${Object.keys(byRound).sort((a, b) => b - a).map((r) => `
+      <div class="rd"><div class="small muted">Round ${r}</div>
+      ${byRound[r].map((c) => `<div class="clue"><span>${esc(nameOf(c.playerId))}</span>${c.skipped ? '<em>skipped</em>' : `<span class="txt">${esc(c.text)}</span>`}</div>`).join('')}</div>`).join('')}</div>`;
+  }
+
+  function talliesCard() {
+    if (!state.tallies.length) return '';
+    const label = { 'accused': 'Accused', 'no-majority': 'No majority → next round', 'tie-revote': 'Tie → re-vote', 'tie-moderator': 'Still tied → moderator decides' };
+    return `<div class="card"><h3>Vote history</h3>${state.tallies.map((t) => {
+      const parts = Object.entries(t.counts).sort((a, b) => b[1] - a[1]).map(([id, n]) => `${esc(nameOf(id))} ${n}`);
+      if (t.abstain) parts.push(`skip ${t.abstain}`);
+      return `<div class="tally"><b>Round ${t.round}${t.revote ? ' (re-vote)' : ''}:</b> ${label[t.outcome] || ''}${t.accusedId ? ' ' + esc(nameOf(t.accusedId)) : ''}<div class="muted">${parts.join(' · ') || 'no votes'}</div></div>`;
+    }).join('')}</div>`;
+  }
+
+  function playerList(opts = {}) {
+    return `<ul class="players">${state.players.map((p) => `
+      <li><span class="pname">${avatar(p)}<b>${esc(p.name)}</b>${state.you.id === p.id ? '<span class="chip">you</span>' : ''}
+        ${opts.showImp && p.id === state.imposterId ? '<span class="chip" style="color:var(--accent)">imposter</span>' : ''}
+        ${opts.showVoted && state.voted.includes(p.id) ? '<span class="chip" style="color:var(--good)">voted</span>' : ''}</span>
+        <span class="row">${opts.extra ? opts.extra(p) : ''}<span class="dot ${p.online ? '' : 'off'}" title="${p.online ? 'online' : 'offline'}"></span></span></li>`).join('')}</ul>`;
+  }
+
+  function resultCard() {
+    const r = state.result, imp = esc(nameOf(state.imposterId)), w = esc(state.word), acc = esc(nameOf(state.accusedId));
+    const why = {
+      'wrong-accusation': `${acc} was not the imposter.`,
+      'guessed-word': `${imp} was caught, but named the word${state.guess ? ` (“${esc(state.guess)}”)` : ''}.`,
+      'wrong-guess': `${imp} was caught and guessed “${esc(state.guess)}” — wrong.`,
+      'imposter-passed': `${imp} was caught and didn't risk a guess.`,
+    }[r.reason];
+    return `<div class="card result">
+      <div class="big ${r.winner === 'imposter' ? 'win-imp' : 'win-pl'}">${r.winner === 'imposter' ? 'Imposter wins!' : 'Players win!'}</div>
+      <p>${why}</p>
+      <div class="row wrap" style="justify-content:center"><span class="chip">Imposter: <b>${imp}</b></span><span class="chip">Word: <b>${w}</b></span><span class="chip">Topic: ${esc(state.topic)}</span></div>
+    </div>`;
+  }
+
+  /* ---------- home ---------- */
+  function homeView() {
+    return `${header()}
+      <div style="text-align:center;margin:28px 0 8px"><h1>Who's the<br><span style="color:var(--accent)">imposter?</span></h1>
+      <p class="muted">Everyone knows the secret name — except one.</p></div>
+      <form class="card stack" data-form="join">
+        <h2>Join a game</h2>
+        <div><label>Room code</label><input name="code" data-keep="code" value="${esc(urlRoom)}" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="ABCDE" style="text-transform:uppercase;letter-spacing:.15em;font-weight:700"></div>
+        <div><label>Your name</label><input name="name" data-keep="name" maxlength="20" autocomplete="nickname" placeholder="e.g. Rafi"></div>
+        <button class="btn-primary full" type="submit">Join</button>
+      </form>
+      <div class="divider">or</div>
+      <button class="btn-ghost full" data-act="create">Host a game as moderator</button>
+      <div class="card"><details><summary>How to play</summary><ol>
+        <li>The moderator creates a room, picks a <b>topic</b> (e.g. Fruit) and a <b>secret name</b> (e.g. Mango).</li>
+        <li>4–10 players join with the room code. When the moderator starts, the room locks.</li>
+        <li>One random player is the <b>imposter</b>: they see only the topic.</li>
+        <li>Each round, everyone gives a one-word clue in turn, then votes. A majority catches the suspect; otherwise the next round begins.</li>
+        <li>Round 4 is final — players must pick someone (ties get one re-vote, then the moderator decides).</li>
+        <li>Wrong person accused → imposter wins. Imposter caught → they can guess the name; guess right and they still win.</li>
+      </ol></details></div>`;
+  }
+
+  /* ---------- moderator ---------- */
+  function modView() {
+    const s = state;
+    const shareBtn = `<button class="btn-ghost" data-act="share" style="padding:8px 12px">Share link</button>`;
+    let body = '';
+    if (s.phase === 'lobby') {
+      const n = s.players.length, ready = s.topic && s.word && n >= s.limits.min && n <= s.limits.max;
+      const hint = !s.topic || !s.word ? 'Save a topic and secret name' : n < s.limits.min ? `Waiting for ${s.limits.min - n} more player${s.limits.min - n > 1 ? 's' : ''}` : 'Ready to start';
+      body = `
+        <form class="card stack" data-form="secret">
+          <div class="row between"><h2>Secret</h2>${s.topic && s.word ? '<span class="chip" style="color:var(--good)">Saved ✓</span>' : '<span class="chip">Not set</span>'}</div>
+          <div><label>Topic (players will see this)</label><input name="topic" data-keep="topic" maxlength="40" value="${esc(s.topic)}" placeholder="e.g. Fruit"></div>
+          <div class="row wrap">${['Fruit','Food','Football player','Politician','Animal','Country','Movie','Cricketer'].map((t) => `<button type="button" class="chip" data-act="chip" data-arg="${t}">${t}</button>`).join('')}</div>
+          <div><label>Secret name (hidden from the imposter)</label><input name="word" data-keep="word" maxlength="60" value="${esc(s.word)}" placeholder="e.g. Mango" autocomplete="off"></div>
+          <button class="full" type="submit">Save secret</button>
+        </form>
+        <div class="card"><div class="row between"><h2>Players</h2><span class="muted">${n}/${s.limits.max}</span></div>
+          ${n ? playerList({ extra: (p) => `<button class="btn-ghost" style="padding:5px 10px;font-size:13px" data-act="kick" data-arg="${p.id}" data-confirm="Remove ${esc(p.name)}?">Remove</button>` }) : '<p class="muted">Share the room code — players join on their phones.</p>'}
+        </div>
+        <button class="btn-primary full" data-act="start" ${ready ? '' : 'disabled'}>Start game & lock room</button>
+        <p class="muted small" style="text-align:center">${hint}</p>`;
+    } else {
+      const secret = modReveal
+        ? `<div class="secret" data-act="modReveal"><div class="small muted">Topic: ${esc(s.topic)}</div><div class="big">${esc(s.word)}</div><div class="small">Imposter: <b style="color:var(--accent)">${esc(nameOf(s.imposterId))}</b> · tap to hide</div></div>`
+        : `<div class="secret hidden-tap" data-act="modReveal">Topic: <b>${esc(s.topic)}</b><br><span class="small">Tap to show the secret name & imposter</span></div>`;
+      let panel = '';
+      if (s.phase === 'clues') {
+        const cur = s.players.find((p) => p.id === s.turnId);
+        panel = `<div class="card stack"><h2>Clue time</h2><p>Waiting for <b>${esc(cur?.name)}</b> ${cur && !cur.online ? '<span class="chip">offline</span>' : ''}</p>
+          <button class="btn-ghost full" data-act="skipTurn" data-confirm="Skip ${esc(cur?.name)}'s turn?">Skip this player's turn</button></div>`;
+      } else if (s.phase === 'voting') {
+        panel = `<div class="card stack"><h2>Voting${s.candidates ? ' — re-vote' : ''}</h2><p class="muted">${s.voted.length}/${s.players.length} voted</p>
+          ${modReveal ? `<div class="small">${s.players.map((p) => `${esc(p.name)} → ${s.votes[p.id] ? (s.votes[p.id] === 'skip' ? 'skip' : esc(nameOf(s.votes[p.id]))) : '…'}`).join('<br>')}</div>` : ''}
+          <button class="btn-ghost full" data-act="closeVoting" data-confirm="Close voting now? Missing votes count as skip.">Close voting now</button></div>`;
+      } else if (s.phase === 'tiebreak') {
+        panel = `<div class="card stack"><h2>Break the tie</h2><p class="muted">Still tied after the re-vote. Choose who is accused:</p>
+          <div class="vote-grid">${s.tieCandidates.map((id) => `<button data-act="tiebreak" data-arg="${id}" data-confirm="Accuse ${esc(nameOf(id))}?">${avatar({ id, name: nameOf(id) })}${esc(nameOf(id))}</button>`).join('')}</div></div>`;
+      } else if (s.phase === 'guess') {
+        panel = `<div class="card"><h2>Imposter caught!</h2><p class="pulse">${esc(nameOf(s.accusedId))} is deciding whether to guess the name…</p></div>`;
+      } else if (s.phase === 'review') {
+        panel = `<div class="card stack"><h2>Check the guess</h2><p>Imposter guessed <b>“${esc(s.guess)}”</b>. Secret name is <b>“${esc(s.word)}”</b>.</p>
+          <p class="muted small">Not an exact match. Accept it if it's the same thing (spelling, short form, etc).</p>
+          <div class="row"><button class="btn-danger" style="flex:1" data-act="review" data-arg="0">Reject — players win</button><button class="btn-good" style="flex:1" data-act="review" data-arg="1">Accept — imposter wins</button></div></div>`;
+      } else if (s.phase === 'ended') {
+        panel = resultCard() + `<div class="row"><button class="btn-primary" style="flex:1" data-act="newGame">Play again</button><button class="btn-ghost" data-act="closeRoom" data-confirm="Close the room for everyone?">Close room</button></div>
+          <p class="muted small" style="text-align:center">Play again keeps the players and reopens the lobby.</p>`;
+      }
+      body = `${s.phase !== 'ended' ? `<div class="card">${roundsBar()}</div>` : ''}${secret}${panel}${cluesBoard()}${talliesCard()}
+        <div class="card"><h3>Players</h3>${playerList({ showImp: modReveal, showVoted: s.phase === 'voting' })}</div>
+        ${s.phase !== 'ended' ? '<button class="btn-ghost full" data-act="newGame" data-confirm="Abort this game and go back to the lobby?">Abort game</button>' : ''}`;
+    }
+    return `${header(`<span class="chip">Moderator</span>`)}
+      <div class="card row between"><div><div class="small muted">Room code</div><div class="code">${esc(s.code)}</div></div>${shareBtn}</div>${body}`;
+  }
+
+  /* ---------- player ---------- */
+  function playerView() {
+    const s = state, me = s.you;
+    let body = '';
+    if (s.phase === 'lobby') {
+      body = `<div class="card" style="text-align:center"><h2>You're in, ${esc(me.name)}!</h2><p class="muted pulse">Waiting for the moderator to start…</p></div>
+        <div class="card"><div class="row between"><h3>Players</h3><span class="muted">${s.players.length}/${s.limits.max}</span></div>${playerList()}</div>
+        <button class="btn-ghost full" data-act="leave">Leave room</button>`;
+    } else {
+      const secret = !reveal && s.phase !== 'ended'
+        ? `<div class="secret hidden-tap" data-act="reveal">🔒 Tap to see your card<br><span class="small">Keep your screen hidden from others</span></div>`
+        : me.isImposter
+          ? `<div class="secret imp" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div><div class="big">You're the imposter</div><div class="small">Blend in. Figure out the name from the clues.${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`
+          : `<div class="secret" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div><div class="big">${esc(s.word)}</div><div class="small">Find the one who doesn't know it.${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`;
+      let panel = '';
+      if (s.phase === 'clues') {
+        if (s.turnId === me.id) {
+          panel = `<form class="card stack" data-form="clue"><h2>Your turn!</h2><p class="muted small">Give a short clue about the ${esc(s.topic.toLowerCase())}. Not too obvious…</p>
+            <input name="text" data-keep="clue" maxlength="40" autocomplete="off" placeholder="One word clue" autofocus><button class="btn-primary full" type="submit">Submit clue</button></form>`;
+        } else {
+          const pos = s.order.indexOf(me.id) - s.order.indexOf(s.turnId);
+          panel = `<div class="card"><p>Waiting for <b>${esc(nameOf(s.turnId))}</b> to give a clue…</p>${pos > 0 ? `<p class="muted small">You're ${pos === 1 ? 'next' : `up in ${pos} turns`}.</p>` : ''}</div>`;
+        }
+      } else if (s.phase === 'voting') {
+        const pool = (s.candidates || s.players.map((p) => p.id)).filter((id) => id !== me.id);
+        const final = s.round >= s.limits.rounds;
+        panel = `<div class="card stack"><h2>${s.candidates ? 'Re-vote: it\'s a tie' : 'Who is the imposter?'}</h2>
+          <p class="muted small">${final ? 'Final round — you must choose.' : 'Need a majority to accuse. Skip if unsure.'} ${s.voted.length}/${s.players.length} voted. You can change your vote until everyone has voted.</p>
+          <div class="vote-grid">${pool.map((id) => `<button class="${s.myVote === id ? 'sel' : ''}" data-act="vote" data-arg="${id}">${avatar({ id, name: nameOf(id) })}${esc(nameOf(id))}</button>`).join('')}</div>
+          ${final ? '' : `<button class="btn-ghost full ${s.myVote === 'skip' ? 'sel' : ''}" data-act="vote" data-arg="skip">${s.myVote === 'skip' ? '✓ Skipping this round' : 'Skip — not sure yet'}</button>`}</div>`;
+      } else if (s.phase === 'tiebreak') {
+        panel = `<div class="card"><p class="pulse">Still tied — the moderator is breaking the tie…</p></div>`;
+      } else if (s.phase === 'guess') {
+        panel = me.isImposter
+          ? `<form class="card stack" data-form="guess"><h2 class="win-imp">You've been caught!</h2><p>Name the secret ${esc(s.topic.toLowerCase())} correctly and you still win.</p>
+              <input name="text" data-keep="guess" maxlength="60" autocomplete="off" placeholder="Your guess"><button class="btn-primary full" type="submit">Submit guess</button>
+              <button type="button" class="btn-ghost full" data-act="pass" data-confirm="Give up without guessing? Players will win.">Give up</button></form>`
+          : `<div class="card"><h2>${esc(nameOf(s.accusedId))} is the imposter!</h2><p class="pulse muted">They get one chance to guess the name…</p></div>`;
+      } else if (s.phase === 'review') {
+        panel = `<div class="card"><p class="pulse">The moderator is checking the imposter's guess…</p>${me.isImposter ? `<p class="muted small">Your guess: “${esc(s.guess)}”</p>` : ''}</div>`;
+      } else if (s.phase === 'ended') {
+        panel = resultCard() + `<p class="muted small" style="text-align:center">Waiting for the moderator to start another game…</p>`;
+      }
+      body = `${s.phase !== 'ended' ? `<div class="card">${roundsBar()}</div>` : ''}${secret}${panel}${cluesBoard()}${s.phase !== 'clues' ? talliesCard() : ''}`;
+    }
+    return `${header(`<span class="row small muted">${esc(me.name)} · ${esc(s.code)} <span class="dot ${s.modOnline ? '' : 'off'}" title="moderator ${s.modOnline ? 'online' : 'offline'}"></span></span>`)}${body}`;
+  }
+
+  /* ---------- render (keeps typed text & focus across live updates) ---------- */
+  function render() {
+    const keep = {};
+    document.querySelectorAll('[data-keep]').forEach((el) => (keep[el.dataset.keep] = el.value));
+    const f = document.activeElement, fk = f?.dataset?.keep, sel = fk ? [f.selectionStart, f.selectionEnd] : null;
+    $app.innerHTML = !state ? homeView() : state.you.role === 'mod' ? modView() : playerView();
+    document.querySelectorAll('[data-keep]').forEach((el) => { if (keep[el.dataset.keep] !== undefined) el.value = keep[el.dataset.keep]; });
+    if (fk) { const el = document.querySelector(`[data-keep="${fk}"]`); if (el) { el.focus(); try { el.setSelectionRange(...sel); } catch {} } }
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b || b.disabled) return;
+    const { act: type, arg, confirm: c } = b.dataset;
+    if (c && !confirm(c)) return;
+    switch (type) {
+      case 'create': {
+        const r = await post('create');
+        if (r.ok) startSession({ code: r.code, token: r.token }); else toast(r.error, 'err');
+        break;
+      }
+      case 'chip': { const i = document.querySelector('[data-keep="topic"]'); if (i) { i.value = arg; document.querySelector('[data-keep="word"]')?.focus(); } break; }
+      case 'share': {
+        const link = `${location.origin}/?room=${state.code}`;
+        if (navigator.share) { try { await navigator.share({ title: 'Join my Imposter game', text: `Room code: ${state.code}`, url: link }); } catch {} }
+        else { try { await navigator.clipboard.writeText(link); toast('Link copied'); } catch { prompt('Share this link', link); } }
+        break;
+      }
+      case 'reveal': reveal = !reveal; render(); break;
+      case 'modReveal': modReveal = !modReveal; render(); break;
+      case 'kick': await act('kick', { id: arg }); break;
+      case 'vote': await act('vote', { target: arg }); break;
+      case 'tiebreak': await act('tiebreak', { target: arg }); break;
+      case 'review': await act('review', { accept: arg === '1' }); break;
+      case 'leave':
+      case 'closeRoom': { const r = await act(type); if (r.ok) { es?.close(); es = null; save(null); state = null; render(); } break; }
+      default: await act(type);
+    }
+  });
+
+  document.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target, fd = Object.fromEntries(new FormData(form));
+    const btn = form.querySelector('[type=submit]'); if (btn) btn.disabled = true;
+    try {
+      if (form.dataset.form === 'join') {
+        const r = await post('join', { code: fd.code, name: fd.name });
+        if (r.ok) { startSession({ code: r.code, token: r.token }); history.replaceState(null, '', '/'); } else toast(r.error, 'err');
+      } else if (form.dataset.form === 'secret') {
+        const r = await act('setSecret', { topic: fd.topic, word: fd.word });
+        if (r.ok) toast('Secret saved');
+      } else if (form.dataset.form === 'clue') {
+        const r = await act('clue', { text: fd.text });
+        if (r.ok) { const i = document.querySelector('[data-keep="clue"]'); if (i) i.value = ''; }
+      } else if (form.dataset.form === 'guess') {
+        await act('guess', { text: fd.text });
+      }
+    } finally { if (btn && btn.isConnected) btn.disabled = false; }
+  });
+
+  connect();
+})();
+</script>
+</body>
+</html>

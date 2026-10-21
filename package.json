@@ -1,0 +1,14 @@
+{
+  "name": "imposter-game",
+  "version": "1.0.0",
+  "description": "Real-time multiplayer Imposter word game (moderator + 4-10 players). Zero dependencies.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/simulate.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

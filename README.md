@@ -1,0 +1,64 @@
+# Imposter — party word game
+
+Real-time web game: one moderator, 4–10 players, one hidden imposter.
+Zero dependencies — plain Node.js (18+). No database; rooms live in memory.
+
+## Rules (as implemented)
+
+1. Moderator taps **Host a game**, gets a 5-letter room code, sets a **topic** (e.g. Fruit) and a **secret name** (e.g. Mango).
+2. Players join on their phones with the code or the shared link (`/?room=CODE`). Min 4, max 10, unique names.
+3. Moderator presses **Start** → room locks, one random player becomes the imposter. Everyone sees the topic; only non-imposters see the name. Cards are hidden behind "tap to reveal".
+4. Each round: every player gives one clue in turn order (order rotates each round), then everyone votes.
+   - Rounds 1–3: a player needs a **strict majority** of all votes to be accused; players may **skip**. No majority → next round.
+   - Round 4 (final): skip is not allowed — players must decide. Most votes is accused. Tie → one re-vote among the tied players; still tied → moderator picks among them.
+5. Accused is innocent → **imposter wins**.
+6. Accused is the imposter → imposter may guess the secret name (or give up).
+   - Exact match (ignores case, spaces, punctuation, accents) → **imposter wins**.
+   - Not exact → moderator rules (accept spelling variants / reject). Reject or give up → **players win**.
+
+Extras: players can't put the secret name inside their clue; moderator can skip a stuck player's turn, close voting early (missing votes = skip), remove players in the lobby, abort, play again with the same players. Refreshing or losing signal rejoins automatically.
+
+## Run
+
+```bash
+node server.js            # http://localhost:3000   (PORT env var to change)
+npm test                  # plays 10 simulated games against a live server
+```
+
+## Deploy
+
+**Any VPS (PM2):**
+```bash
+pm2 start server.js --name imposter
+```
+
+**Docker:**
+```bash
+docker build -t imposter . && docker run -d -p 3000:3000 --restart unless-stopped imposter
+```
+
+**Render / Railway / Fly:** create a Node web service, start command `node server.js`, health check `/health`. No build step.
+
+**Behind nginx** — live updates use Server-Sent Events, so disable buffering on `/events`:
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Connection "";
+    proxy_buffering off;
+    proxy_read_timeout 1h;
+}
+```
+
+**Important:** run a single instance. Game state is in memory, so don't load-balance across multiple processes (no PM2 cluster mode). A restart ends any game in progress.
+
+## API (for reference)
+
+| Method | Path | Body | Purpose |
+|---|---|---|---|
+| POST | `/api/create` | – | New room → `{code, token}` (moderator) |
+| POST | `/api/join` | `{code, name}` | Join lobby → `{code, token}` |
+| POST | `/api/action` | `{code, token, type, ...}` | `setSecret, start, clue, vote, skipTurn, closeVoting, tiebreak, guess, pass, review, kick, leave, newGame, closeRoom` |
+| GET | `/events?code=&token=` | – | SSE stream of per-viewer `state` (the imposter's view never contains the word) |
+| GET | `/health` | – | Liveness |
