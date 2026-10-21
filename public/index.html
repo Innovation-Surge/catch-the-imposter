@@ -245,6 +245,7 @@ details li{margin:4px 0}
       if (s.accusedId === id) { stamp = 'CAUGHT'; sub = 'was the imposter'; }
       else { stamp = 'ESCAPED'; safe = true; sub = `${esc(nameOf(s.accusedId))} was innocent — this was the imposter`; }
     } else return '';
+    if (s.decoy && s.you.id !== id) sub += ` · their word was “${esc(s.decoy)}”`;
     const key = `${s.gameNo}:${id}`, anim = revealPlayed !== key;
     revealPlayed = key;
     return `<div class="reveal ${safe ? 'safe' : ''} ${anim ? 'anim' : ''}"><span class="glow"></span><span class="stamp">${stamp}</span>
