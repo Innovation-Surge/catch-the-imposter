@@ -336,8 +336,18 @@ async function test(name, fn) {
     await ctx.m.act('openVoting');
     await until(() => ctx.m.sse.state.phase === 'voting', 'final voting');
     for (const p of ctx.players) assert((await p.act('vote', { target: p === imp ? crew[0].id : imp.id })).ok);
-    await until(() => ctx.m.sse.state.phase === 'guess', 'imposter caught');
+    // Caught in person: no typed guess — the moderator rules on the spoken guess.
+    await until(() => ctx.m.sse.state.phase === 'review', 'imposter caught → moderator decides');
     assert.strictEqual(ctx.m.sse.state.accusedId, imp.id);
+    await until(() => crew[0].sse.state.phase === 'review', 'players see the catch');
+    assert.strictEqual(crew[0].sse.state.accusedId, imp.id, 'everyone sees who was caught');
+    r = await imp.act('guess', { text: 'Mango' });
+    assert(!r.ok, 'no typed guess in person');
+    r = await crew[0].act('review', { accept: true });
+    assert(!r.ok && /moderator/.test(r.error), 'only the moderator decides the winner');
+    assert((await ctx.m.act('review', { accept: false })).ok);
+    await until(() => ctx.m.sse.state.phase === 'ended', 'end');
+    assert.deepStrictEqual(ctx.m.sse.state.result, { winner: 'players', reason: 'wrong-guess' });
   });
 
   srv.kill();

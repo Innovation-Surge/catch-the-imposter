@@ -21,8 +21,10 @@ Clients poll `/api/state` about every 1.5 s (every 5 s while the tab is hidden).
    - Final round (round 3 or 4): skip is not allowed — players must decide. Most votes is accused. Tie → one re-vote among the tied players; still tied → moderator picks among them.
 5. Accused is innocent → **imposter wins**.
 6. Accused is the imposter → imposter may guess the secret name (or give up).
-   - Exact match (ignores case, spaces, punctuation, accents) → **imposter wins**.
-   - Not exact → moderator rules (accept spelling variants / reject). Reject or give up → **players win**.
+   - **Typed in the app:** exact match (ignores case, spaces, punctuation, accents) → **imposter wins**. Not exact → moderator rules (accept spelling variants / reject). Reject or give up → **players win**.
+   - **Said out loud:** the imposter says their guess; nothing is typed. The moderator taps **Right — imposter wins** or **Wrong — players win**.
+
+Once a vote decides, every screen shows the imposter's name in big letters with a short reveal animation: **CAUGHT** when the imposter was voted out, **ESCAPED** when an innocent player was. The animation plays once and is turned off for people who have reduced motion set.
 
 Extras: players can't put the secret name inside their clue; moderator can skip a stuck player's turn, close voting early (missing votes = skip), remove players in the lobby, abort, play again with the same players. Refreshing or losing signal rejoins automatically.
 

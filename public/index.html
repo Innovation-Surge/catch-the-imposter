@@ -76,6 +76,29 @@ button.chip{padding:6px 11px}
 .win-imp{color:var(--accent)} .win-pl{color:var(--good)}
 .pulse{animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.55}}
+/* imposter reveal */
+.reveal{position:relative;overflow:hidden;text-align:center;padding:26px 16px 24px;border-radius:22px;margin:12px 0;border:2px solid var(--accent);
+  background:radial-gradient(420px 200px at 50% 0,color-mix(in srgb,var(--accent) 35%,transparent),transparent),var(--card);box-shadow:0 0 34px color-mix(in srgb,var(--accent) 40%,transparent)}
+.reveal.safe{border-color:var(--accent2);background:radial-gradient(420px 200px at 50% 0,color-mix(in srgb,var(--accent2) 26%,transparent),transparent),var(--card);box-shadow:0 0 30px color-mix(in srgb,var(--accent2) 30%,transparent)}
+.reveal .stamp{display:inline-block;padding:5px 14px;border:3px solid var(--accent);border-radius:10px;color:var(--accent);font:800 15px/1 Inter,system-ui,sans-serif;letter-spacing:.22em;transform:rotate(-6deg)}
+.reveal.safe .stamp{border-color:var(--accent2);color:var(--accent2)}
+.reveal .who{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:clamp(44px,15vw,76px);line-height:1;margin:16px 0 8px;text-transform:uppercase;word-break:break-word;color:var(--text)}
+.reveal .sub{color:var(--muted);font-size:14px}
+.reveal .glow{position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 30%,color-mix(in srgb,#fff 22%,transparent) 50%,transparent 70%);transform:translateX(-120%)}
+.reveal:not(.safe){animation:rv-throb 2.4s ease-in-out infinite}
+.reveal.anim{animation:rv-pop .7s cubic-bezier(.2,1.6,.4,1) both,rv-shake .5s .75s ease-in-out}
+.reveal.anim:not(.safe){animation:rv-pop .7s cubic-bezier(.2,1.6,.4,1) both,rv-shake .5s .75s ease-in-out,rv-throb 2.4s 1.8s ease-in-out infinite}
+.reveal.anim .stamp{animation:rv-stamp .45s .35s cubic-bezier(.3,1.8,.5,1) both}
+.reveal.anim .who{animation:rv-rise .6s .55s ease-out both}
+.reveal.anim .sub{animation:rv-rise .5s .9s ease-out both}
+.reveal.anim .glow{animation:rv-sweep 1.1s 1.1s ease-in-out}
+@keyframes rv-pop{0%{transform:scale(.55);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes rv-shake{20%,60%{transform:translateX(-7px) rotate(-.6deg)}40%,80%{transform:translateX(7px) rotate(.6deg)}}
+@keyframes rv-stamp{0%{transform:scale(3) rotate(-18deg);opacity:0}100%{transform:scale(1) rotate(-6deg);opacity:1}}
+@keyframes rv-rise{0%{transform:translateY(22px) scale(.9);opacity:0;letter-spacing:.3em}100%{transform:none;opacity:1}}
+@keyframes rv-sweep{to{transform:translateX(120%)}}
+@keyframes rv-throb{50%{box-shadow:0 0 54px color-mix(in srgb,var(--accent) 65%,transparent)}}
+@media (prefers-reduced-motion:reduce){.reveal,.reveal *{animation:none!important}}
 .divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:18px 0}
 .divider:before,.divider:after{content:"";flex:1;height:1px;background:var(--line)}
 details summary{cursor:pointer;font-weight:600}
@@ -195,12 +218,32 @@ details li{margin:4px 0}
         <span class="row">${opts.extra ? opts.extra(p) : ''}<span class="dot ${p.online ? '' : 'off'}" title="${p.online ? 'online' : 'offline'}"></span></span></li>`).join('')}</ul>`;
   }
 
+  // Big imposter reveal shown to everyone once a vote has decided. Animates only the
+  // first time it appears (renders repeat on every live update).
+  let revealPlayed = null;
+  function revealCard() {
+    const s = state;
+    let id, stamp, sub, safe = false;
+    if (s.phase === 'guess' || s.phase === 'review') {
+      id = s.accusedId; stamp = 'CAUGHT';
+      sub = s.you.id === id ? "You've been caught!" : 'is the imposter!';
+    } else if (s.phase === 'ended') {
+      id = s.imposterId;
+      if (s.accusedId === id) { stamp = 'CAUGHT'; sub = 'was the imposter'; }
+      else { stamp = 'ESCAPED'; safe = true; sub = `${esc(nameOf(s.accusedId))} was innocent — this was the imposter`; }
+    } else return '';
+    const key = `${s.gameNo}:${id}`, anim = revealPlayed !== key;
+    revealPlayed = key;
+    return `<div class="reveal ${safe ? 'safe' : ''} ${anim ? 'anim' : ''}"><span class="glow"></span><span class="stamp">${stamp}</span>
+      <div class="who">${esc(nameOf(id))}</div><div class="sub">${sub}</div></div>`;
+  }
+
   function resultCard() {
     const r = state.result, imp = esc(nameOf(state.imposterId)), w = esc(state.word), acc = esc(nameOf(state.accusedId));
     const why = {
       'wrong-accusation': `${acc} was not the imposter.`,
       'guessed-word': `${imp} was caught, but named the word${state.guess ? ` (“${esc(state.guess)}”)` : ''}.`,
-      'wrong-guess': `${imp} was caught and guessed “${esc(state.guess)}” — wrong.`,
+      'wrong-guess': state.guess ? `${imp} was caught and guessed “${esc(state.guess)}” — wrong.` : `${imp} was caught and didn't name the word.`,
       'imposter-passed': `${imp} was caught and didn't risk a guess.`,
     }[r.reason];
     return `<div class="card result">
@@ -287,6 +330,10 @@ details li{margin:4px 0}
           <div class="vote-grid">${s.tieCandidates.map((id) => `<button data-act="tiebreak" data-arg="${id}" data-confirm="Accuse ${esc(nameOf(id))}?">${avatar({ id, name: nameOf(id) })}${esc(nameOf(id))}</button>`).join('')}</div></div>`;
       } else if (s.phase === 'guess') {
         panel = `<div class="card"><h2>Imposter caught!</h2><p class="pulse">${esc(nameOf(s.accusedId))} is deciding whether to guess the name…</p></div>`;
+      } else if (s.phase === 'review' && s.mode === 'inperson') {
+        panel = `<div class="card stack"><h2>Who wins?</h2><p>Ask <b>${esc(nameOf(s.accusedId))}</b> to say their guess out loud. The secret name is <b>“${esc(s.word)}”</b>.</p>
+          <p class="muted small">If they name it (spelling or short forms count), the imposter wins. A wrong guess, or no guess, means the players win.</p>
+          <div class="row"><button class="btn-danger" style="flex:1" data-act="review" data-arg="0">Wrong — players win</button><button class="btn-good" style="flex:1" data-act="review" data-arg="1">Right — imposter wins</button></div></div>`;
       } else if (s.phase === 'review') {
         panel = `<div class="card stack"><h2>Check the guess</h2><p>Imposter guessed <b>“${esc(s.guess)}”</b>. Secret name is <b>“${esc(s.word)}”</b>.</p>
           <p class="muted small">Not an exact match. Accept it if it's the same thing (spelling, short form, etc).</p>
@@ -295,7 +342,7 @@ details li{margin:4px 0}
         panel = resultCard() + `<div class="row"><button class="btn-primary" style="flex:1" data-act="newGame">Play again</button><button class="btn-ghost" data-act="closeRoom" data-confirm="Close the room for everyone?">Close room</button></div>
           <p class="muted small" style="text-align:center">Play again keeps the players and reopens the lobby.</p>`;
       }
-      body = `${s.phase !== 'ended' ? `<div class="card">${roundsBar()}</div>` : ''}${secret}${panel}${cluesBoard()}${talliesCard()}
+      body = `${s.phase !== 'ended' ? `<div class="card">${roundsBar()}</div>` : ''}${revealCard()}${secret}${panel}${cluesBoard()}${talliesCard()}
         <div class="card"><h3>Players</h3>${playerList({ showImp: modReveal, showVoted: s.phase === 'voting' })}</div>
         ${s.phase !== 'ended' ? '<button class="btn-ghost full" data-act="newGame" data-confirm="Abort this game and go back to the lobby?">Abort game</button>' : ''}`;
     }
@@ -340,16 +387,20 @@ details li{margin:4px 0}
         panel = `<div class="card"><p class="pulse">Still tied — the moderator is breaking the tie…</p></div>`;
       } else if (s.phase === 'guess') {
         panel = me.isImposter
-          ? `<form class="card stack" data-form="guess"><h2 class="win-imp">You've been caught!</h2><p>Name the secret ${esc(s.topic.toLowerCase())} correctly and you still win.</p>
+          ? `<form class="card stack" data-form="guess"><h2>Guess the name</h2><p>Name the secret ${esc(s.topic.toLowerCase())} correctly and you still win.</p>
               <input name="text" data-keep="guess" maxlength="60" autocomplete="off" placeholder="Your guess"><button class="btn-primary full" type="submit">Submit guess</button>
               <button type="button" class="btn-ghost full" data-act="pass" data-confirm="Give up without guessing? Players will win.">Give up</button></form>`
-          : `<div class="card"><h2>${esc(nameOf(s.accusedId))} is the imposter!</h2><p class="pulse muted">They get one chance to guess the name…</p></div>`;
+          : `<div class="card"><p class="pulse muted">${esc(nameOf(s.accusedId))} gets one chance to guess the name…</p></div>`;
+      } else if (s.phase === 'review' && s.mode === 'inperson') {
+        panel = me.isImposter
+          ? `<div class="card"><h2>Say your guess out loud</h2><p>Name the secret ${esc(s.topic.toLowerCase())} correctly and you still win.</p><p class="muted small pulse">The moderator decides who wins.</p></div>`
+          : `<div class="card"><p class="pulse muted">${esc(nameOf(s.accusedId))} gets one guess at the name, out loud. The moderator decides who wins.</p></div>`;
       } else if (s.phase === 'review') {
         panel = `<div class="card"><p class="pulse">The moderator is checking the imposter's guess…</p>${me.isImposter ? `<p class="muted small">Your guess: “${esc(s.guess)}”</p>` : ''}</div>`;
       } else if (s.phase === 'ended') {
         panel = resultCard() + `<p class="muted small" style="text-align:center">Waiting for the moderator to start another game…</p>`;
       }
-      body = `${s.phase !== 'ended' ? `<div class="card">${roundsBar()}</div>` : ''}${secret}${panel}${cluesBoard()}${s.phase !== 'clues' ? talliesCard() : ''}`;
+      body = `${s.phase !== 'ended' ? `<div class="card">${roundsBar()}</div>` : ''}${revealCard()}${secret}${panel}${cluesBoard()}${s.phase !== 'clues' ? talliesCard() : ''}`;
     }
     return `${header(`<span class="row small muted">${esc(me.name)} · ${esc(s.code)} <span class="dot ${s.modOnline ? '' : 'off'}" title="moderator ${s.modOnline ? 'online' : 'offline'}"></span></span>`)}${body}`;
   }
