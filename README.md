@@ -9,7 +9,7 @@ Clients poll `/api/state` about every 1.5 s (every 5 s while the tab is hidden).
 
 ## Rules (as implemented)
 
-1. Moderator taps **Host a game**, gets a 5-letter room code, sets a **topic** (e.g. Fruit) and a **secret name** (e.g. Mango).
+1. Moderator taps **Host a game**, gets a 5-letter room code, sets a **topic** (e.g. Fruit) and a **secret name** (e.g. Mango), plus an optional **hint** (e.g. Grows on trees). Everyone sees the topic and hint, the imposter included, so the hint can't contain the secret name.
    In the lobby the moderator also picks the **game options**:
    - **Clues:** *typed in the app* (default), or *said out loud* when everyone is in the same room.
    - **Rounds:** 3 or 4 (default 4). The last round is the final round.

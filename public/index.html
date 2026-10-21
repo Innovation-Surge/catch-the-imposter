@@ -73,6 +73,7 @@ button.chip{padding:6px 11px}
 .votes{margin-top:8px;display:grid;gap:4px}.votes div{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:9px;background:var(--bg2);font-size:13px}
 .votes .hit{background:color-mix(in srgb,var(--good) 16%,var(--bg2));outline:1px solid color-mix(in srgb,var(--good) 55%,transparent)}
 .votes .hit b{color:var(--good)} .votes .none{color:var(--muted)}
+.hint{margin-top:4px;font-size:13px;color:var(--text);opacity:.85}
 .banner{padding:12px 14px;border-radius:12px;background:var(--bg2);border:1px dashed var(--line)}
 .result{text-align:center;padding:28px 16px}
 .result .big{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:800;font-size:40px;line-height:1}
@@ -250,6 +251,8 @@ details li{margin:4px 0}
       <div class="who">${esc(nameOf(id))}</div><div class="sub">${sub}</div></div>`;
   }
 
+  const hintLine = () => (state.hint ? `<div class="hint">💡 Hint: ${esc(state.hint)}</div>` : '');
+
   function resultCard() {
     const r = state.result, imp = esc(nameOf(state.imposterId)), w = esc(state.word), acc = esc(nameOf(state.accusedId));
     const why = {
@@ -261,7 +264,7 @@ details li{margin:4px 0}
     return `<div class="card result">
       <div class="big ${r.winner === 'imposter' ? 'win-imp' : 'win-pl'}">${r.winner === 'imposter' ? 'Imposter wins!' : 'Players win!'}</div>
       <p>${why}</p>
-      <div class="row wrap" style="justify-content:center"><span class="chip">Imposter: <b>${imp}</b></span><span class="chip">Word: <b>${w}</b></span><span class="chip">Topic: ${esc(state.topic)}</span></div>
+      <div class="row wrap" style="justify-content:center"><span class="chip">Imposter: <b>${imp}</b></span><span class="chip">Word: <b>${w}</b></span><span class="chip">Topic: ${esc(state.topic)}</span>${state.hint ? `<span class="chip">Hint: ${esc(state.hint)}</span>` : ''}</div>
     </div>`;
   }
 
@@ -302,6 +305,7 @@ details li{margin:4px 0}
           <div class="row between"><h2>Secret</h2>${s.topic && s.word ? '<span class="chip" style="color:var(--good)">Saved ✓</span>' : '<span class="chip">Not set</span>'}</div>
           <div><label>Topic (players will see this)</label><input name="topic" data-keep="topic" maxlength="40" value="${esc(s.topic)}" placeholder="e.g. Fruit"></div>
           <div class="row wrap">${['Fruit','Food','Football player','Politician','Animal','Country','Movie','Cricketer'].map((t) => `<button type="button" class="chip" data-act="chip" data-arg="${t}">${t}</button>`).join('')}</div>
+          <div><label>Hint (optional — everyone sees it, including the imposter)</label><input name="hint" data-keep="hint" maxlength="80" value="${esc(s.hint)}" placeholder="e.g. Grows on trees" autocomplete="off"></div>
           <div><label>Secret name (hidden from the imposter)</label><input name="word" data-keep="word" maxlength="60" value="${esc(s.word)}" placeholder="e.g. Mango" autocomplete="off"></div>
           <button class="full" type="submit">Save secret</button>
         </form>
@@ -319,8 +323,8 @@ details li{margin:4px 0}
         <p class="muted small" style="text-align:center">${hint}</p>`;
     } else {
       const secret = modReveal
-        ? `<div class="secret" data-act="modReveal"><div class="small muted">Topic: ${esc(s.topic)}</div><div class="big">${esc(s.word)}</div><div class="small">Imposter: <b style="color:var(--accent)">${esc(nameOf(s.imposterId))}</b> · tap to hide</div></div>`
-        : `<div class="secret hidden-tap" data-act="modReveal">Topic: <b>${esc(s.topic)}</b><br><span class="small">Tap to show the secret name & imposter</span></div>`;
+        ? `<div class="secret" data-act="modReveal"><div class="small muted">Topic: ${esc(s.topic)}</div>${hintLine()}<div class="big">${esc(s.word)}</div><div class="small">Imposter: <b style="color:var(--accent)">${esc(nameOf(s.imposterId))}</b> · tap to hide</div></div>`
+        : `<div class="secret hidden-tap" data-act="modReveal">Topic: <b>${esc(s.topic)}</b>${hintLine()}<span class="small">Tap to show the secret name & imposter</span></div>`;
       let panel = '';
       if (s.phase === 'clues') {
         const cur = s.players.find((p) => p.id === s.turnId);
@@ -374,8 +378,8 @@ details li{margin:4px 0}
       const secret = !reveal && s.phase !== 'ended'
         ? `<div class="secret hidden-tap" data-act="reveal">🔒 Tap to see your card<br><span class="small">Keep your screen hidden from others</span></div>`
         : me.isImposter
-          ? `<div class="secret imp" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div><div class="big">You're the imposter</div><div class="small">Blend in. Figure out the name from the clues.${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`
-          : `<div class="secret" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div><div class="big">${esc(s.word)}</div><div class="small">Find the one who doesn't know it.${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`;
+          ? `<div class="secret imp" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div>${hintLine()}<div class="big">You're the imposter</div><div class="small">Blend in. Figure out the name from the clues.${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`
+          : `<div class="secret" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div>${hintLine()}<div class="big">${esc(s.word)}</div><div class="small">Find the one who doesn't know it.${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`;
       let panel = '';
       if (s.phase === 'clues') {
         if (s.turnId === me.id) {
@@ -468,7 +472,7 @@ details li{margin:4px 0}
         const r = await post('join', { code: fd.code, name: fd.name });
         if (r.ok) { startSession({ code: r.code, token: r.token }); history.replaceState(null, '', '/'); } else toast(r.error, 'err');
       } else if (form.dataset.form === 'secret') {
-        const r = await act('setSecret', { topic: fd.topic, word: fd.word });
+        const r = await act('setSecret', { topic: fd.topic, hint: fd.hint, word: fd.word });
         if (r.ok) toast('Secret saved');
       } else if (form.dataset.form === 'clue') {
         const r = await act('clue', { text: fd.text });

@@ -356,6 +356,21 @@ async function test(name, fn) {
     assert.deepStrictEqual(ctx.m.sse.state.result, { winner: 'players', reason: 'wrong-guess' });
   });
 
+  await test('optional hint: shown to everyone, cannot leak the word, cleared on play again', async () => {
+    const ctx = await setup(4);
+    let r = await ctx.m.act('setSecret', { topic: 'Fruit', word: 'Mango', hint: 'mango season' });
+    assert(!r.ok && /hint can't contain/.test(r.error), 'hint with the secret name refused');
+    assert((await ctx.m.act('setSecret', { topic: 'Fruit', word: 'Mango', hint: '  Grows   on trees ' })).ok);
+    await until(() => ctx.players[0].sse.state.hint === null, 'hint hidden in the lobby');
+    await startAndMap(ctx);
+    await until(() => ctx.imp.sse.state.hint === 'Grows on trees', 'imposter sees hint');
+    for (const p of ctx.crew) await until(() => p.sse.state.hint === 'Grows on trees', 'players see hint');
+    await ctx.m.act('newGame');
+    await until(() => ctx.m.sse.state.phase === 'lobby', 'lobby');
+    assert.strictEqual(ctx.m.sse.state.hint, '', 'hint cleared with the word');
+    assert((await ctx.m.act('setSecret', { topic: 'Fruit', word: 'Apple' })).ok, 'hint stays optional');
+  });
+
   srv.kill();
   for (const [s, n, e] of results) console.log(`${s}  ${n}${e ? '\n' + e : ''}`);
   const failed = results.filter((r) => r[0] === 'FAIL').length;
