@@ -371,6 +371,60 @@ async function test(name, fn) {
     assert((await ctx.m.act('setSecret', { topic: 'Fruit', word: 'Apple' })).ok, 'hint stays optional');
   });
 
+  await test("undercover: imposter gets a different word and can't tell until caught", async () => {
+    const ctx = await setup(5);
+    assert((await ctx.m.act('setOptions', { variant: 'undercover' })).ok);
+    let r = await ctx.m.act('start');
+    assert(!r.ok && /imposter's word/.test(r.error), "start needs the imposter's word");
+    r = await ctx.m.act('setSecret', { topic: 'Fruit', word: 'Mango', decoy: ' mango! ' });
+    assert(!r.ok && /different/.test(r.error), 'decoy must differ from the word');
+    r = await ctx.m.act('setSecret', { topic: 'Fruit', word: 'Mango', decoy: 'Papaya', hint: 'papaya-ish' });
+    assert(!r.ok && /imposter's word/.test(r.error), 'hint cannot leak the decoy');
+    assert((await ctx.m.act('setSecret', { topic: 'Fruit', word: 'Mango', decoy: 'Papaya' })).ok);
+    assert((await ctx.m.act('start')).ok);
+    // isImposter is hidden in undercover, so find the imposter from the moderator's view.
+    await until(() => ctx.m.sse.state.phase === 'clues' && ctx.players.every((p) => p.sse.state?.phase === 'clues'), 'start');
+    for (const p of ctx.players) p.id = p.sse.state.you.id;
+    ctx.byId = Object.fromEntries(ctx.players.map((p) => [p.id, p]));
+    ctx.imp = ctx.byId[ctx.m.sse.state.imposterId];
+    ctx.crew = ctx.players.filter((p) => p !== ctx.imp);
+    assert.strictEqual(ctx.m.sse.state.decoy, 'Papaya', 'moderator sees the decoy');
+
+    // The unaware imposter's view matches a regular player's in every field but their own identity and word.
+    const strip = (st) => ({ ...st, you: { ...st.you, id: 0, name: 0 }, word: 0, players: st.players.map((p) => ({ ...p, online: 0 })) });
+    const impView = ctx.imp.sse.state, crewView = ctx.crew[0].sse.state;
+    assert.strictEqual(impView.you.isImposter, false, 'imposter is not told');
+    assert.strictEqual(impView.word, 'Papaya', 'imposter sees the decoy as their word');
+    assert.strictEqual(crewView.word, 'Mango');
+    assert.strictEqual(impView.decoy, null);
+    assert.strictEqual(crewView.decoy, null, 'players do not see the decoy during the game');
+    assert.deepStrictEqual(strip(impView), strip(crewView), 'nothing else gives the imposter away');
+
+    // The imposter's clue is checked against their own word, like everyone else's.
+    await until(() => ctx.m.sse.state.turnId, 'turn');
+    while (ctx.m.sse.state.turnId !== ctx.imp.id) {
+      const p = ctx.byId[ctx.m.sse.state.turnId];
+      assert((await p.act('clue', { text: `clue-${p.name}` })).ok);
+      await until(() => ctx.m.sse.state.turnId !== p.id, 'turn advance');
+    }
+    r = await ctx.imp.act('clue', { text: 'ripe papaya' });
+    assert(!r.ok && /can't contain/.test(r.error), "imposter's clue can't contain their word");
+    assert((await ctx.imp.act('clue', { text: 'ripe mango' })).ok, 'the real word is not checked for the imposter');
+    await until(() => ctx.m.sse.state.turnId !== ctx.imp.id, 'turn advance');
+    await giveClues(ctx);
+
+    await voteAll(ctx, (p) => (p === ctx.imp ? ctx.crew[0].id : ctx.imp.id));
+    await until(() => ctx.imp.sse.state.phase === 'guess', 'caught');
+    assert.strictEqual(ctx.imp.sse.state.you.isImposter, true, 'imposter finds out once caught');
+    assert.strictEqual(ctx.imp.sse.state.word, null, 'and does not see the real word before guessing');
+    await until(() => ctx.crew[0].sse.state.phase === 'guess', 'players see the catch');
+    assert.strictEqual(ctx.crew[0].sse.state.decoy, 'Papaya', "everyone sees the imposter's word after the vote");
+    assert((await ctx.imp.act('guess', { text: 'Mango' })).ok);
+    await until(() => ctx.crew[1].sse.state.phase === 'ended', 'end');
+    assert.strictEqual(ctx.crew[1].sse.state.imposterId, ctx.imp.id);
+    assert.strictEqual(ctx.crew[1].sse.state.decoy, 'Papaya');
+  });
+
   srv.kill();
   for (const [s, n, e] of results) console.log(`${s}  ${n}${e ? '\n' + e : ''}`);
   const failed = results.filter((r) => r[0] === 'FAIL').length;

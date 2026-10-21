@@ -264,7 +264,7 @@ details li{margin:4px 0}
     return `<div class="card result">
       <div class="big ${r.winner === 'imposter' ? 'win-imp' : 'win-pl'}">${r.winner === 'imposter' ? 'Imposter wins!' : 'Players win!'}</div>
       <p>${why}</p>
-      <div class="row wrap" style="justify-content:center"><span class="chip">Imposter: <b>${imp}</b></span><span class="chip">Word: <b>${w}</b></span><span class="chip">Topic: ${esc(state.topic)}</span>${state.hint ? `<span class="chip">Hint: ${esc(state.hint)}</span>` : ''}</div>
+      <div class="row wrap" style="justify-content:center"><span class="chip">Imposter: <b>${imp}</b></span><span class="chip">Word: <b>${w}</b></span>${state.decoy ? `<span class="chip">Imposter's word: <b>${esc(state.decoy)}</b></span>` : ''}<span class="chip">Topic: ${esc(state.topic)}</span>${state.hint ? `<span class="chip">Hint: ${esc(state.hint)}</span>` : ''}</div>
     </div>`;
   }
 
@@ -284,7 +284,7 @@ details li{margin:4px 0}
       <div class="card"><details><summary>How to play</summary><ol>
         <li>The moderator creates a room, picks a <b>topic</b> (e.g. Fruit) and a <b>secret name</b> (e.g. Mango).</li>
         <li>4–10 players join with the room code. When the moderator starts, the room locks.</li>
-        <li>One random player is the <b>imposter</b>: they see only the topic.</li>
+        <li>One random player is the <b>imposter</b>: they see only the topic. Or, if the moderator picks it, the imposter gets a <b>different word</b> and doesn't know they're the imposter until the vote.</li>
         <li>Each round, everyone gives a one-word clue in turn — typed in the app, or said out loud if you're playing in the same room — then votes. A majority catches the suspect; otherwise the next round begins.</li>
         <li>In the same room, the moderator decides when voting opens, and only the moderator can skip a vote and move to the next round.</li>
         <li>The moderator sets 3 or 4 rounds. The last round is final — players must pick someone (ties get one re-vote, then the moderator decides).</li>
@@ -298,15 +298,17 @@ details li{margin:4px 0}
     const shareBtn = `<button class="btn-ghost" data-act="share" style="padding:8px 12px">Share link</button>`;
     let body = '';
     if (s.phase === 'lobby') {
-      const n = s.players.length, ready = s.topic && s.word && n >= s.limits.min && n <= s.limits.max;
-      const hint = !s.topic || !s.word ? 'Save a topic and secret name' : n < s.limits.min ? `Waiting for ${s.limits.min - n} more player${s.limits.min - n > 1 ? 's' : ''}` : 'Ready to start';
+      const undercover = s.variant === 'undercover', saved = s.topic && s.word && (!undercover || s.decoy);
+      const n = s.players.length, ready = saved && n >= s.limits.min && n <= s.limits.max;
+      const hint = !saved ? (undercover ? "Save a topic, secret name and the imposter's word" : 'Save a topic and secret name') : n < s.limits.min ? `Waiting for ${s.limits.min - n} more player${s.limits.min - n > 1 ? 's' : ''}` : 'Ready to start';
       body = `
         <form class="card stack" data-form="secret">
-          <div class="row between"><h2>Secret</h2>${s.topic && s.word ? '<span class="chip" style="color:var(--good)">Saved ✓</span>' : '<span class="chip">Not set</span>'}</div>
+          <div class="row between"><h2>Secret</h2>${saved ? '<span class="chip" style="color:var(--good)">Saved ✓</span>' : '<span class="chip">Not set</span>'}</div>
           <div><label>Topic (players will see this)</label><input name="topic" data-keep="topic" maxlength="40" value="${esc(s.topic)}" placeholder="e.g. Fruit"></div>
           <div class="row wrap">${['Fruit','Food','Football player','Politician','Animal','Country','Movie','Cricketer'].map((t) => `<button type="button" class="chip" data-act="chip" data-arg="${t}">${t}</button>`).join('')}</div>
           <div><label>Hint (optional — everyone sees it, including the imposter)</label><input name="hint" data-keep="hint" maxlength="80" value="${esc(s.hint)}" placeholder="e.g. Grows on trees" autocomplete="off"></div>
           <div><label>Secret name (hidden from the imposter)</label><input name="word" data-keep="word" maxlength="60" value="${esc(s.word)}" placeholder="e.g. Mango" autocomplete="off"></div>
+          ${undercover ? `<div><label>Imposter's word (only the imposter sees it, as if it were the secret name)</label><input name="decoy" data-keep="decoy" maxlength="60" value="${esc(s.decoy)}" placeholder="e.g. Papaya" autocomplete="off"></div>` : ''}
           <button class="full" type="submit">Save secret</button>
         </form>
         <div class="card stack"><h2>Game options</h2>
@@ -314,6 +316,10 @@ details li{margin:4px 0}
             <button class="${s.mode === 'app' ? 'sel' : ''}" data-act="opt" data-arg="mode:app">Typed in the app</button>
             <button class="${s.mode === 'inperson' ? 'sel' : ''}" data-act="opt" data-arg="mode:inperson">Said out loud</button></div>
             <p class="muted small" style="margin:6px 0 0">${s.mode === 'inperson' ? 'Everyone is in the same room. Players say their clue out loud; you open the vote when they are ready, or skip it and start the next round.' : 'Players type their clue in turn on their phones.'}</p></div>
+          <div><label>Imposter</label><div class="seg">
+            <button class="${!undercover ? 'sel' : ''}" data-act="opt" data-arg="variant:classic">Knows they're the imposter</button>
+            <button class="${undercover ? 'sel' : ''}" data-act="opt" data-arg="variant:undercover">Gets a different word</button></div>
+            <p class="muted small" style="margin:6px 0 0">${undercover ? "The imposter doesn't know. They get their own word from you, and find out only when the vote catches them." : 'The imposter is told, and sees only the topic.'}</p></div>
           <div><label>Rounds</label><div class="seg">${s.limits.roundChoices.map((r) => `<button class="${s.limits.rounds === r ? 'sel' : ''}" data-act="opt" data-arg="rounds:${r}">${r} rounds</button>`).join('')}</div></div>
         </div>
         <div class="card"><div class="row between"><h2>Players</h2><span class="muted">${n}/${s.limits.max}</span></div>
@@ -323,7 +329,7 @@ details li{margin:4px 0}
         <p class="muted small" style="text-align:center">${hint}</p>`;
     } else {
       const secret = modReveal
-        ? `<div class="secret" data-act="modReveal"><div class="small muted">Topic: ${esc(s.topic)}</div>${hintLine()}<div class="big">${esc(s.word)}</div><div class="small">Imposter: <b style="color:var(--accent)">${esc(nameOf(s.imposterId))}</b> · tap to hide</div></div>`
+        ? `<div class="secret" data-act="modReveal"><div class="small muted">Topic: ${esc(s.topic)}</div>${hintLine()}<div class="big">${esc(s.word)}</div><div class="small">Imposter: <b style="color:var(--accent)">${esc(nameOf(s.imposterId))}</b>${s.decoy ? ` — their word: <b>${esc(s.decoy)}</b>` : ''} · tap to hide</div></div>`
         : `<div class="secret hidden-tap" data-act="modReveal">Topic: <b>${esc(s.topic)}</b>${hintLine()}<span class="small">Tap to show the secret name & imposter</span></div>`;
       let panel = '';
       if (s.phase === 'clues') {
@@ -378,8 +384,8 @@ details li{margin:4px 0}
       const secret = !reveal && s.phase !== 'ended'
         ? `<div class="secret hidden-tap" data-act="reveal">🔒 Tap to see your card<br><span class="small">Keep your screen hidden from others</span></div>`
         : me.isImposter
-          ? `<div class="secret imp" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div>${hintLine()}<div class="big">You're the imposter</div><div class="small">Blend in. Figure out the name from the clues.${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`
-          : `<div class="secret" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div>${hintLine()}<div class="big">${esc(s.word)}</div><div class="small">Find the one who doesn't know it.${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`;
+          ? `<div class="secret imp" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div>${hintLine()}<div class="big">You're the imposter</div><div class="small">${s.decoy ? `Your word “${esc(s.decoy)}” was the odd one out.` : 'Blend in. Figure out the name from the clues.'}${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`
+          : `<div class="secret" data-act="reveal"><div class="small muted">Topic: ${esc(s.topic)}</div>${hintLine()}<div class="big">${esc(s.word)}</div><div class="small">${s.variant === 'undercover' ? 'One player has a different word. Find them.' : "Find the one who doesn't know it."}${s.phase !== 'ended' ? ' · tap to hide' : ''}</div></div>`;
       let panel = '';
       if (s.phase === 'clues') {
         if (s.turnId === me.id) {
@@ -472,7 +478,7 @@ details li{margin:4px 0}
         const r = await post('join', { code: fd.code, name: fd.name });
         if (r.ok) { startSession({ code: r.code, token: r.token }); history.replaceState(null, '', '/'); } else toast(r.error, 'err');
       } else if (form.dataset.form === 'secret') {
-        const r = await act('setSecret', { topic: fd.topic, hint: fd.hint, word: fd.word });
+        const r = await act('setSecret', { topic: fd.topic, hint: fd.hint, word: fd.word, decoy: fd.decoy });
         if (r.ok) toast('Secret saved');
       } else if (form.dataset.form === 'clue') {
         const r = await act('clue', { text: fd.text });

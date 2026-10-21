@@ -13,6 +13,7 @@ Clients poll `/api/state` about every 1.5 s (every 5 s while the tab is hidden).
    In the lobby the moderator also picks the **game options**:
    - **Clues:** *typed in the app* (default), or *said out loud* when everyone is in the same room.
    - **Rounds:** 3 or 4 (default 4). The last round is the final round.
+   - **Imposter:** *knows they're the imposter* (default; sees only the topic), or *gets a different word*. In the second option the moderator also enters the **imposter's word** (e.g. Papaya). The imposter sees it as if it were the secret name and has no way to tell they're the imposter. Everything else plays the same. Once a vote catches them, they find out (and can still guess the real name). After the vote everyone sees who the imposter was and what their word was.
 2. Players join on their phones with the code or the shared link (`/?room=CODE`). Min 4, max 10, unique names.
 3. Moderator presses **Start** → room locks, one random player becomes the imposter. Everyone sees the topic; only non-imposters see the name. Cards are hidden behind "tap to reveal".
 4. Each round: every player gives one clue in turn order (order rotates each round), then everyone votes.
